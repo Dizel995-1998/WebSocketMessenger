@@ -1,0 +1,9 @@
+.env
+/shelf/
+/workspace.xml
+/dataSources/
+/dataSources.local.xml
+/httpRequests/
+/modules.xml
+/vcs.xml
+*.iml
