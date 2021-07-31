@@ -33,10 +33,12 @@ RUN  docker-php-ext-configure gd \
 RUN docker-php-ext-install intl opcache mysqli pdo_mysql zip soap sockets exif
 
 RUN pecl install xdebug \
-    && docker-php-ext-enable xdebug
+    && docker-php-ext-enable xdebug \
+    && docker-php-ext-install sockets \
+    && docker-php-ext-enable sockets
 
 # composer
-COPY --from=composer:1 /usr/bin/composer /usr/local/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # change uid for nginx user to avoid problems with host permissions
 # change uid for nginx user to avoid problems with host permissions
@@ -50,9 +52,6 @@ ENV TARGET_GID ${HOST_GROUP_ID:-1000}
 RUN if [ ! -z "$TARGET_UID" ] ; then usermod -u $TARGET_UID www-data ; fi
 RUN if [ ! -z "$TARGET_GID" ] ; then groupmod -g $TARGET_GID www-data ; fi
 RUN mkdir /var/session && chown www-data:www-data /var/session
-
-# bitrix pool config
-COPY bitrix.conf /usr/local/etc/php-fpm.d/bitrix.conf
 
 WORKDIR /var/www
 
