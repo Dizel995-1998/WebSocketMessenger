@@ -4,20 +4,14 @@ volumes:
   database: ~
 
 services:
-  mysql:
-    image: mariadb:10.1.45
-    ports:
-      - 3335:3306
+  nginx:
+    image: nginx
     volumes:
-      - database:/var/lib/mysql:cached
-      - ./database/:/docker-entrypoint-initdb.d
-      - ./database/bitrix.cnf:/etc/mysql/conf.d/bitrix.cnf
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-  php:
+      - ./:/var/www
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 80:80
+  php-fpm:
     build:
       context: docker/php
       args:
@@ -26,21 +20,9 @@ services:
     volumes:
       - .:/var/www:cached
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+    ports:
+      - 7777:7777
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_DATABASE: ${DB_DATABASE}
+      PHP_IDE_CONFIG: "serverName=local"
       XDEBUG_MODE: "develop,debug,trace"
       XDEBUG_CONFIG: "client_host=${XDEBUG_HOST:-host.docker.internal} client_port=${XDEBUG_PORT:-9000} start_with_request=yes log='/var/www/log/xdebug.log' cli_color=1"
-
-  nginx:
-    build:
-      context: docker/nginx/
-      args:
-        HOST_USER_ID: ${HOST_USER_ID}
-        HOST_GROUP_ID: ${HOST_GROUP_ID}
-    ports:
-      - ${NGINX_PORT:-80}:80
-    volumes:
-      - .:/var/www:cached
