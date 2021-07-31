@@ -1,0 +1,15 @@
+{
+    "require": {
+        "guzzlehttp/guzzle": "^7.3",
+        "ext-http": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lib\\": "src/Lib"
+        },
+        "files": [
+            "src/init.php"
+        ]
+    }
+}
