@@ -35,6 +35,7 @@ class CommandRunner
                 $command->setOutput($this->output);
                 $command->configure();
                 echo $command->execute();
+                break;
             }
         }
     }
