@@ -8,8 +8,6 @@ class QueryBuilder
 {
     const ALLOW_JOIN_TYPES = ['LEFT', 'INNER', 'RIGHT'];
 
-    private EntityTable $entity;
-
     private string $selectQuery = '*';
     private string $filterQuery = '';
     private string $joinQuery = '';
@@ -86,7 +84,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function setJoin(string $tableName, string $joinType, array $reference) : self
+    public function setJoin(string $tableName, string $tableAlias, string $joinType, array $reference) : self
     {
         $joinType = strtoupper($joinType);
 
@@ -111,12 +109,14 @@ class QueryBuilder
             throw new InvalidArgumentException('There is no reference to ref.entity, use ref.COLUMN_NAME');
         }
 
+        // TODO переписать на использование sprintf
+
         $this->joinQuery .=
-            ' ' . $joinType . ' JOIN ' . $this->escapeString($tableName) .
+            ' ' . $joinType . ' JOIN ' . $this->escapeString($tableName) . ' AS ' . $this->escapeString($tableAlias) .
             ' ON ' .
-            $this->fromTable . '.' . $this->escapeString($thisEntity['this_key']) .
+            $this->escapeString($this->fromTable) . '.' . $this->escapeString($thisEntity['this_key']) .
             ' = ' .
-            $this->escapeString($tableName) . '.' . $this->escapeString($refEntity['ref_key']) . ' ';
+            $this->escapeString($tableAlias) . '.' . $this->escapeString($refEntity['ref_key']) . ' ';
 
         return $this;
     }
