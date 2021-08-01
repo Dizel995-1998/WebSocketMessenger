@@ -20,9 +20,21 @@ services:
     volumes:
       - .:/var/www:cached
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
-    ports:
-      - 7777:7777
     environment:
       PHP_IDE_CONFIG: "serverName=local"
       XDEBUG_MODE: "develop,debug,trace"
       XDEBUG_CONFIG: "client_host=${XDEBUG_HOST:-host.docker.internal} client_port=${XDEBUG_PORT:-9000} start_with_request=yes log='/var/www/log/xdebug.log' cli_color=1"
+
+  mysql:
+    image: mariadb:10.1.45
+    volumes:
+      - database:/var/lib/mysql:cached
+      - ./database:/docker-entrypoint-initdb.d
+      - ./database/bitrix.cnf:/etc/mysql/conf.d/bitrix.cnf
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 3306:3306
