@@ -62,7 +62,7 @@ class QueryBuilder
             $arResult = [];
 
             foreach ($arFilter as $field => $value) {
-                if (!preg_match('~(?<comparison_operator><|>)?(?<column_name>\S+)~', $field, $matches)) {
+                if (!preg_match('~(?<comparison_operator><|>|!=)?(?<column_name>\S+)~', $field, $matches)) {
                     throw new InvalidArgumentException(sprintf('Incorrect filter field: %s', $field));
                 }
 
