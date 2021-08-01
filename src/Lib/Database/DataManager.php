@@ -39,6 +39,8 @@ abstract class DataManager
 
         $query = new QueryBuilder($tableName);
 
+        // TODO тут необходима проверка, если в селекте не указано не одно из полей, то необходимо сформировать дефолтные алиасы для связанных сущностей
+
         $parameters['select'] && $query->setSelect($parameters['select']);
         $parameters['filter'] && $query->setFilter($parameters['filter']);
 
