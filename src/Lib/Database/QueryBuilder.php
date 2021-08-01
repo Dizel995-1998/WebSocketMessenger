@@ -109,14 +109,15 @@ class QueryBuilder
             throw new InvalidArgumentException('There is no reference to ref.entity, use ref.COLUMN_NAME');
         }
 
-        // TODO переписать на использование sprintf
-
-        $this->joinQuery .=
-            ' ' . $joinType . ' JOIN ' . $this->escapeString($tableName) . ' AS ' . $this->escapeString($tableAlias) .
-            ' ON ' .
-            $this->escapeString($this->fromTable) . '.' . $this->escapeString($thisEntity['this_key']) .
-            ' = ' .
-            $this->escapeString($tableAlias) . '.' . $this->escapeString($refEntity['ref_key']) . ' ';
+        $this->joinQuery .= sprintf(' %s JOIN %s as %s ON %s.%s = %s.%s ',
+            $joinType,
+            $this->escapeString($tableName),
+            $this->escapeString($tableAlias),
+            $this->escapeString($this->fromTable),
+            $this->escapeString($thisEntity['this_key']),
+            $this->escapeString($tableAlias),
+            $this->escapeString($refEntity['ref_key'])
+        );
 
         return $this;
     }
