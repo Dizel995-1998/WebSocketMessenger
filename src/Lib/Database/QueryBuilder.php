@@ -10,50 +10,70 @@ class QueryBuilder
 
     private EntityTable $entity;
 
-    private string $selectQuery = '';
+    private string $selectQuery = '*';
     private string $filterQuery = '';
     private string $joinQuery = '';
     private string $groupQuery;
     private string $sortQuery;
+    private string $fromTable;
 
-    public function __construct(EntityTable $entity)
+    public function __construct(string $tableName)
     {
-        $this->entity = $entity;
+        $this->fromTable = $tableName;
     }
 
     /**
+     * TODO исправить баг с экранированием колонок
      * Экранирует строку ( не уверен в правильности работоспособности )
      * @param string $stringForEscape
      * @return string
      */
     private function escapeString(string $stringForEscape) : string
     {
-        return is_numeric($stringForEscape) ?
-            addslashes($stringForEscape) :
-            "'". addslashes($stringForEscape) . "'";
+        return $stringForEscape;
     }
+
+    // TODO приведение колонок из массива и таблиц к одному регистру
 
     public function setSelect(array $arSelect) : self
     {
         $arResult = [];
 
         foreach ($arSelect as $alias => $field) {
-            $arResult[] = is_numeric($alias) ? $field : $field . ' AS ' . $alias;
+            if (!preg_match('~((?<table>\S+)\.)?(?<field>\S+)~', $field, $matches)) {
+                throw new InvalidArgumentException('Select fields have invalid value');
+            }
+
+            $arResult[] = is_numeric($alias) ?
+                sprintf('%s.%s', $matches['table'] ?: $this->fromTable, $matches['field']) :
+                sprintf('%s.%s as %s', $matches['table'] ?: $this->fromTable, $matches['field'], $alias);
         }
 
         $this->selectQuery = implode(', ', $arResult);
         return $this;
     }
 
+    /**
+     * TODO реализовать операции больше, меньше, не равно
+     * @param array $arFilter
+     * @return $this
+     */
     public function setFilter(array $arFilter) : self
     {
         $buildFilter = function ($arFilter) : array {
             $arResult = [];
 
             foreach ($arFilter as $field => $value) {
+                if (!preg_match('~(?<comparison_operator><|>)?(?<column_name>\S+)~', $field, $matches)) {
+                    throw new InvalidArgumentException(sprintf('Incorrect filter field: %s', $field));
+                }
+
+                $matches['comparison_operator'] = $matches['comparison_operator'] ?: '=';
+                $matches['column_name'] = $this->fromTable . '.' . $matches['column_name'];
+
                 $arResult[] = is_array($value) ?
-                    sprintf('%s IN (%s)', $this->escapeString($field), $this->escapeString(implode(',', $value))) :
-                    $this->escapeString($field) . ' = ' . $this->escapeString($value);
+                    sprintf('%s IN (%s)', $matches['column_name'], $this->escapeString(implode(',', $value))) :
+                    $matches['column_name'] . ' ' . $matches['comparison_operator'] . ' ' . $this->escapeString($value);
             }
 
             return $arResult;
@@ -94,11 +114,9 @@ class QueryBuilder
         $this->joinQuery .=
             ' ' . $joinType . ' JOIN ' . $this->escapeString($tableName) .
             ' ON ' .
-            $this->escapeString($thisEntity['this_key']) .
+            $this->fromTable . '.' . $this->escapeString($thisEntity['this_key']) .
             ' = ' .
-            $this->escapeString($tableName) .
-            '.' .
-            $this->escapeString($refEntity['ref_key']);
+            $this->escapeString($tableName) . '.' . $this->escapeString($refEntity['ref_key']) . ' ';
 
         return $this;
     }
@@ -106,9 +124,14 @@ class QueryBuilder
     public function getQuery() : string
     {
         $query = 'SELECT ' . $this->selectQuery ?: '*' . PHP_EOL;
-        $query .= 'WHERE ' . $this->filterQuery . PHP_EOL;
-        $query .= 'FROM ' . $this->entity->getTableName() . PHP_EOL;
+        $query .= ' FROM ' . $this->fromTable . PHP_EOL;
         $query .= $this->joinQuery ?: '';
+
+        // TODO какой то костыль
+        if ($this->filterQuery) {
+            $query .= 'WHERE ' . $this->filterQuery . PHP_EOL;
+        }
+
         return $query;
     }
 }
