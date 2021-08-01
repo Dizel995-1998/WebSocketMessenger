@@ -2,7 +2,8 @@
     "require": {
         "guzzlehttp/guzzle": "^7.3",
         "ext-http": "*",
-        "ext-json": "*"
+        "ext-json": "*",
+        "ext-pdo": "*"
     },
     "autoload": {
         "psr-4": {
