@@ -71,7 +71,7 @@ class QueryBuilder
 
                 $arResult[] = is_array($value) ?
                     sprintf('%s IN (%s)', $matches['column_name'], $this->escapeString(implode(',', $value))) :
-                    $matches['column_name'] . ' ' . $matches['comparison_operator'] . ' ' . $this->escapeString($value);
+                    sprintf('%s %s %s', $matches['column_name'], $matches['comparison_operator'], $this->escapeString($value));
             }
 
             return $arResult;
