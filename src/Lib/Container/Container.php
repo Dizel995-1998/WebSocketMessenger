@@ -10,8 +10,18 @@ class Container implements ContainerInterface
 {
     private static array $services = [];
 
+    /**
+     * Устанавливает соответствие между интерфейсом сервиса и его конкретным экземпляром
+     * @param string $resolveService
+     * @param string|null $currentService
+     * @param array|null $args
+     */
     public static function setService(string $resolveService, string $currentService = null, array $args = null) : void
     {
+        if (empty($resolveService)) {
+            throw new \InvalidArgumentException('Resolve service cant be empty');
+        }
+
         if (isset(self::$services[$resolveService])) {
             throw new \InvalidArgumentException(sprintf('Trying to overwrite service: %s', $resolveService));
         }
@@ -23,10 +33,17 @@ class Container implements ContainerInterface
     }
 
     /**
+     * Возвращает запрашиваемый обьект сервиса
+     * @param string $resolveService
+     * @return object
      * @throws ReflectionException
      */
     public static function getService(string $resolveService) : object
     {
+        if (empty($resolveService)) {
+            throw new \InvalidArgumentException('Resolve service cant be empty');
+        }
+
         if (!$service = self::$services[$resolveService]['current_service']) {
             throw new RuntimeException(sprintf('Can\'t resolve service: %s', $resolveService));
         }
@@ -62,6 +79,7 @@ class Container implements ContainerInterface
                     continue;
                 }
 
+                /*** Если зависимость есть класс, попытаться найти зависимости зависимостей */
                 $arDependencies[] = self::getService($dependency->getClass()->getName());
             }
         }
@@ -69,6 +87,11 @@ class Container implements ContainerInterface
         return $reflection->newInstanceArgs($arDependencies);
     }
 
+    /**
+     * Проверяет существует ли сервис
+     * @param string $resolveService
+     * @return bool
+     */
     public static function hasService(string $resolveService) : bool
     {
         return isset(self::$services[$resolveService]);
