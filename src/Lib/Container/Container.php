@@ -8,11 +8,15 @@ use RuntimeException;
 
 class Container implements ContainerInterface
 {
-    private array $services = [];
+    private static array $services = [];
 
-    public function setService(string $resolveService, string $currentService = null, array $args = null) : void
+    public static function setService(string $resolveService, string $currentService = null, array $args = null) : void
     {
-        $this->services[$resolveService] = [
+        if (isset(self::$services[$resolveService])) {
+            throw new \InvalidArgumentException(sprintf('Trying to overwrite service: %s', $resolveService));
+        }
+
+        self::$services[$resolveService] = [
             'current_service' => $currentService ?: $resolveService,
             'args' => $args
         ];
@@ -21,14 +25,22 @@ class Container implements ContainerInterface
     /**
      * @throws ReflectionException
      */
-    public function getService(string $resolveService) : object
+    public static function getService(string $resolveService) : object
     {
-        if (!$service = $this->services[$resolveService]['current_service']) {
+        if (!$service = self::$services[$resolveService]['current_service']) {
             throw new RuntimeException(sprintf('Can\'t resolve service: %s', $resolveService));
         }
 
         $reflection = new ReflectionClass($service);
         $arDependencies = [];
+
+        if ($reflection->isInterface()) {
+            throw new RuntimeException(sprintf('Service "%s" can\'t be interface', $service));
+        }
+
+        if (!$reflection->isInstantiable()) {
+            throw new RuntimeException('Can\'t instance object of service');
+        }
 
         if ($constructor = $reflection->getConstructor()) {
             $serviceDependencies = $constructor->getParameters();
@@ -42,7 +54,7 @@ class Container implements ContainerInterface
 
                 /** Если зависимость не класс, а примитивный тип */
                 if (!$dependency->getClass()) {
-                    if (!$primitiveTypeValue = $this->services[$resolveService]['args'][$dependency->getName()]) {
+                    if (!$primitiveTypeValue = self::$services[$resolveService]['args'][$dependency->getName()]) {
                         throw new RuntimeException('Can\'t resolve primitive dependencies');
                     }
 
@@ -50,15 +62,15 @@ class Container implements ContainerInterface
                     continue;
                 }
 
-                $arDependencies[] = $this->getService($dependency->getClass()->getName());
+                $arDependencies[] = self::getService($dependency->getClass()->getName());
             }
         }
 
         return $reflection->newInstanceArgs($arDependencies);
     }
 
-    public function hasService(string $resolveService) : bool
+    public static function hasService(string $resolveService) : bool
     {
-        return isset($this->services[$resolveService]);
+        return isset(self::$services[$resolveService]);
     }
 }

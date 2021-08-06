@@ -4,9 +4,9 @@ namespace Lib\Container;
 
 interface ContainerInterface
 {
-    public function setService(string $resolveService, string $currentService = null, array $args = null) : void;
+    public static function setService(string $resolveService, string $currentService = null, array $args = null) : void;
 
-    public function getService(string $resolveService) : object;
+    public static function getService(string $resolveService) : object;
 
-    public function hasService(string $resolveService) : bool;
+    public static function hasService(string $resolveService) : bool;
 }
