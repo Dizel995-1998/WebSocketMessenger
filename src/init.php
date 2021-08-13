@@ -1,6 +1,24 @@
 <?php
 
-$i = 0;
+use Lib\Container\Container;
+
+$arDbConfig = [
+    'dbHost' => 'mysql',
+    'dbUser' => 'root',
+    'dbPassword' => 'root',
+    'dbName' => 'mydb'
+];
+
+$arMigratorConfig = [
+    'pathToMigrations' => '/var/www/src/Migration'
+];
+
+Container::setService(\Lib\Database\Interfaces\IConnection::class, \Lib\Database\Adapters\PdoConnection::class, $arDbConfig);
+Container::setService(\Lib\Migration\Migrator::class, \Lib\Migration\Migrator::class, $arMigratorConfig);
+
+/**
+ * TODO вынести это говно отсюда
+ */
 
 /**
  * @param $data
