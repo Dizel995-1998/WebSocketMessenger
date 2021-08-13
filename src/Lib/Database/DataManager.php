@@ -2,7 +2,10 @@
 
 namespace Lib\Database;
 
+use Lib\Container\Container;
 use RuntimeException;
+use Service\Database\Interfaces\IConnection;
+use Service\Database\Interfaces\IDbResult;
 
 abstract class DataManager
 {
@@ -10,14 +13,9 @@ abstract class DataManager
 
     const DEFAULT_RUNTIME_JOIN_TYPE = 'LEFT';
 
-    private static function getConnection() : \PDO
+    private static function getConnection() : IConnection
     {
-        $dbHost = 'mysql';
-        $dbName = 'mydb';
-        $dbUser = 'root';
-        $dbPassword = 'root';
-        $dsn = "mysql:host={$dbHost};dbname={$dbName}";
-        return new \PDO($dsn, $dbUser, $dbPassword);
+        return Container::getService(IConnection::class);
     }
 
     abstract public static function getTableName() : string;
@@ -26,15 +24,15 @@ abstract class DataManager
 
     /**
      * @param array $parameters
-     * @return ArResult
+     * @return IDbResult
      */
-    public static function getList(array $parameters)
+    public static function getList(array $parameters) : IDbResult
     {
         // TODO сделать свои виды исключений для ORM
 
         $entityClass = static::class;
         if (!$tableName = $entityClass::getTableName()) {
-            throw new \RuntimeException('Method "getTableName" cant return empty string');
+            throw new \RuntimeException('Method "getTableName" can\'t return empty string');
         }
 
         $query = new QueryBuilder($tableName);
@@ -67,10 +65,8 @@ abstract class DataManager
             $query->setJoin($runtimeTable, $runtimeTableAlias, $runtimeEntity['join_type'], $runtimeEntity['reference']);
         }
 
-        // TODO вызов событий
+        // TODO вызов событий в более абстрактной сущности
 
-        echo $query->getQuery();
-        $obFetch = self::getConnection()->query($query->getQuery());
-        return new ArResult($obFetch->fetchAll(\PDO::FETCH_ASSOC));
+        return self::getConnection()->query($query->getQuery());
     }
 }
