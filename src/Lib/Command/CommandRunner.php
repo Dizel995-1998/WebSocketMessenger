@@ -34,9 +34,11 @@ class CommandRunner
                 $command->setInput($this->input);
                 $command->setOutput($this->output);
                 $command->configure();
-                echo $command->execute();
-                break;
+                return $command->execute();
             }
         }
+
+        /** TODO распечатать все доступные команды */
+        return '';
     }
 }

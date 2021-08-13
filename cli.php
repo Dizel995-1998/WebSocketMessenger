@@ -19,4 +19,4 @@ foreach (scandir($_SERVER['DOCUMENT_ROOT'] . '/src/Command') as $file) {
     $commandRunner->addCommand(new $commandClassName);
 }
 
-$commandRunner->run();
+echo $commandRunner->run();
