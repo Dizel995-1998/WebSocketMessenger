@@ -10,7 +10,7 @@ interface ContainerInterface
      * @param string|null $currentService
      * @param array|null $args
      */
-    public static function setService(string $resolveService, string $currentService = null, array $args = null) : void;
+    public static function setService(string $resolveService, array $args = null, string $currentService = null) : void;
 
     /**
      * Возвращает запрашиваемый обьект сервиса
