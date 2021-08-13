@@ -84,4 +84,14 @@ class PdoConnection implements IConnection
     {
         return $this->getConnection()->rollBack();
     }
+
+    /**
+     * Экранирует выражение
+     * @param string $expression
+     * @return string
+     */
+    public function quote(string $expression): string
+    {
+        return (string) $this->getConnection()->quote($expression);
+    }
 }

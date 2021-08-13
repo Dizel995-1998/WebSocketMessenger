@@ -28,7 +28,9 @@ class QueryBuilder
      */
     private function escapeString(string $stringForEscape) : string
     {
-        return $stringForEscape;
+        return is_numeric($stringForEscape) ?
+            $stringForEscape :
+            "'$stringForEscape'";
     }
 
     // TODO приведение колонок из массива и таблиц к одному регистру

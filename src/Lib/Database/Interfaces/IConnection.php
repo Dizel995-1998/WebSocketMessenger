@@ -15,4 +15,6 @@ interface IConnection
     public function commitTransaction() : bool;
 
     public function rollbackTransaction() : bool;
+
+    public function quote(string $expression) : string;
 }
