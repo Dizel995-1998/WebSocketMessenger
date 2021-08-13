@@ -136,4 +136,44 @@ class Container implements ContainerInterface
 
         return $reflection->invokeArgs($arDependencies);
     }
+
+    /**
+     * TODO добавить в интерфейс
+     * Резолвит зависимости метода сервиса
+     * @param object $service
+     * @param string $methodName
+     * @return mixed возвращает результат метода сервиса
+     * @throws ReflectionException
+     */
+    public static function resolveMethodDependencies(object $service, string $methodName)
+    {
+        if (!self::hasService(get_class($service))) {
+            throw new RuntimeException(sprintf('Service: %s dont registered in IoC', get_class($service)));
+        }
+
+        if (!method_exists($service, $methodName)) {
+            throw new \InvalidArgumentException(sprintf('Service: %s dont have %s method', get_class($service), $methodName));
+        }
+
+        if (!$methodName) {
+            throw new \InvalidArgumentException('Method name can\'t be empty');
+        }
+
+        $reflectionMethod = new \ReflectionMethod($service, $methodName);
+        $methodArgs = $reflectionMethod->getParameters();
+        $arDependencies = [];
+
+        foreach ($methodArgs as $arg) {
+            if ($arg->isDefaultValueAvailable()) {
+                $arDependencies[] = $arg->getDefaultValue();
+                continue;
+            }
+
+            if ($dependencyClass = $arg->getClass()) {
+                $arDependencies[] = self::getService($dependencyClass->getName());
+            }
+        }
+
+        return $reflectionMethod->invokeArgs($service, $arDependencies);
+    }
 }
