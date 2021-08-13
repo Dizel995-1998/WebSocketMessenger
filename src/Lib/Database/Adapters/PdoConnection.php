@@ -50,6 +50,6 @@ class PdoConnection implements IConnection
      */
     public function query(string $sql): IDbResult
     {
-        return new DbResult($this->getConnection()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+        return new PdoResult($this->getConnection()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
     }
 }

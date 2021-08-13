@@ -4,7 +4,7 @@ namespace Service\Database;
 
 use Service\Database\Interfaces\IDbResult;
 
-class DbResult implements IDbResult
+class PdoResult implements IDbResult
 {
     private array $arRows;
 
