@@ -34,18 +34,26 @@ class Container implements ContainerInterface
 
     /**
      * Возвращает запрашиваемый обьект сервиса
-     * @param string $resolveService
-     * @return object
+     * @param string|callable $resolveService
+     * @return mixed
      * @throws ReflectionException
      */
-    public static function getService(string $resolveService) : object
+    public static function getService($resolveService)
     {
+        if (!is_callable($resolveService) && !is_string($resolveService)) {
+            throw new \InvalidArgumentException('Resolve service must be string or callable type');
+        }
+
+        if (is_callable($resolveService)) {
+            return self::getServiceForCallable($resolveService);
+        }
+
         if (empty($resolveService)) {
             throw new \InvalidArgumentException('Resolve service cant be empty');
         }
 
         if (!$service = self::$services[$resolveService]['current_service']) {
-            throw new RuntimeException(sprintf('Can\'t resolve service: %s', $resolveService));
+            throw new RuntimeException(sprintf('Can\'t find resolve service for %s', $resolveService));
         }
 
         $reflection = new ReflectionClass($service);
@@ -64,7 +72,7 @@ class Container implements ContainerInterface
 
             foreach ($serviceDependencies as $dependency) {
                 /** Если у зависимости есть дефолтное значение, взять его */
-                if ($dependency->isDefaultValueAvailable()) {
+                if (!self::$services[$resolveService]['args'][$dependency->getName()] && $dependency->isDefaultValueAvailable()) {
                     $arDependencies[] = $dependency->getDefaultValue();
                     continue;
                 }
@@ -72,7 +80,13 @@ class Container implements ContainerInterface
                 /** Если зависимость не класс, а примитивный тип */
                 if (!$dependency->getClass()) {
                     if (!$primitiveTypeValue = self::$services[$resolveService]['args'][$dependency->getName()]) {
-                        throw new RuntimeException('Can\'t resolve primitive dependencies');
+                        throw new
+                            RuntimeException(
+                                sprintf('Can\'t resolve primitive dependencies, arg "%s" have no value "%s" class',
+                                    $dependency->getName(),
+                                    $resolveService
+                                )
+                        );
                     }
 
                     $arDependencies[] = $primitiveTypeValue;
@@ -95,5 +109,31 @@ class Container implements ContainerInterface
     public static function hasService(string $resolveService) : bool
     {
         return isset(self::$services[$resolveService]);
+    }
+
+    /**
+     * @param callable $func
+     * @return mixed
+     * @throws ReflectionException
+     */
+    private static function getServiceForCallable(callable $func)
+    {
+        $reflection = new \ReflectionFunction($func);
+        $arDependencies = [];
+
+        if ($dependencies = $reflection->getParameters()) {
+            foreach ($dependencies as $dependency) {
+                if ($dependency->isDefaultValueAvailable()) {
+                    $arDependencies[] = $dependency->getDefaultValue();
+                    continue;
+                }
+
+                if ($dependencyClass = $dependency->getClass()) {
+                    $arDependencies[] = self::getService($dependencyClass->getName());
+                }
+            }
+        }
+
+        return $reflection->invokeArgs($arDependencies);
     }
 }

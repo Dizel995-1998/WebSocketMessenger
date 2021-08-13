@@ -15,9 +15,9 @@ interface ContainerInterface
     /**
      * Возвращает запрашиваемый обьект сервиса
      * @param string $resolveService
-     * @return object
+     * @return mixed
      */
-    public static function getService(string $resolveService) : object;
+    public static function getService(string $resolveService);
 
     /**
      * Проверяет существует ли сервис
