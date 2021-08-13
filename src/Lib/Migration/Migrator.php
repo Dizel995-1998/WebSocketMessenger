@@ -26,7 +26,7 @@ class Migrator
         }
 
         try {
-            $rollback ? $migration->up() : $migration->down();
+            $rollback ? $migration->down() : $migration->up();
 
             if (!$this->dbConnection->commitTransaction()) {
                 throw new \RuntimeException('Can\'t commit transaction');
@@ -36,6 +36,8 @@ class Migrator
             if (!$this->dbConnection->rollbackTransaction()) {
                 throw new \RuntimeException('Can\'t rollback transaction');
             }
+
+            throw new \RuntimeException(sprintf('Migration error: %s', $e->getMessage()));
         }
     }
 
