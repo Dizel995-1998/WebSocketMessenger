@@ -44,23 +44,25 @@ class Container implements ContainerInterface
             throw new \InvalidArgumentException('Resolve service must be string or callable type');
         }
 
-        if (is_callable($resolveService)) {
-            return self::getServiceForCallable($resolveService);
-        }
-
         if (empty($resolveService)) {
             throw new \InvalidArgumentException('Resolve service cant be empty');
         }
 
-        if (!$service = self::$services[$resolveService]['current_service']) {
+        if (is_callable($resolveService)) {
+            return self::getServiceForCallable($resolveService);
+        }
+
+        $service = null;
+
+        if (interface_exists($resolveService) && !$service = self::$services[$resolveService]['current_service']) {
             throw new RuntimeException(sprintf('Can\'t find resolve service for %s', $resolveService));
         }
 
-        $reflection = new ReflectionClass($service);
+        $reflection = new ReflectionClass($service ?: $resolveService);
         $arDependencies = [];
 
         if ($reflection->isInterface()) {
-            throw new RuntimeException(sprintf('Service "%s" can\'t be interface', $service));
+            throw new RuntimeException(sprintf('Service "%s" can\'t be interface', $reflection->getName()));
         }
 
         if (!$reflection->isInstantiable()) {
@@ -147,10 +149,6 @@ class Container implements ContainerInterface
      */
     public static function resolveMethodDependencies(object $service, string $methodName)
     {
-        if (!self::hasService(get_class($service))) {
-            throw new RuntimeException(sprintf('Service: %s dont registered in IoC', get_class($service)));
-        }
-
         if (!method_exists($service, $methodName)) {
             throw new \InvalidArgumentException(sprintf('Service: %s dont have %s method', get_class($service), $methodName));
         }

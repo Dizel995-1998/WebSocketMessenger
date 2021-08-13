@@ -13,8 +13,8 @@ $arMigratorConfig = [
     'pathToMigrations' => '/var/www/src/Migration'
 ];
 
-Container::setService(\Lib\Database\Interfaces\IConnection::class, \Lib\Database\Adapters\PdoConnection::class, $arDbConfig);
-Container::setService(\Lib\Migration\Migrator::class, \Lib\Migration\Migrator::class, $arMigratorConfig);
+Container::setService(\Lib\Database\Interfaces\IConnection::class, $arDbConfig, \Lib\Database\Adapters\PdoConnection::class);
+Container::setService(\Lib\Migration\Migrator::class, $arMigratorConfig, \Lib\Migration\Migrator::class);
 
 /**
  * TODO вынести это говно отсюда

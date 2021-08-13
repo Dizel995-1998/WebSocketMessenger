@@ -23,7 +23,7 @@ class RouteCollection implements Iterator
      * Предыдущие значения добавленные через addRoute будут обнулены
      * @param IRoute[] $routes
      */
-    public function addRoutes(array $routes)
+    public function addRoutes(array $routes) : self
     {
         foreach ($routes as $route) {
             if (!$route instanceof IRoute) {
@@ -37,6 +37,7 @@ class RouteCollection implements Iterator
         }
 
         $this->arRoutes = $routes;
+        return $this;
     }
 
     public function current()

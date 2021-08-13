@@ -4,6 +4,7 @@ namespace Lib\Route;
 
 use Exception;
 use InvalidArgumentException;
+use Lib\Container\Container;
 use Lib\Middleware\IMiddleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\RequestInterface;
@@ -101,7 +102,7 @@ class Route implements IRoute
             throw new InvalidArgumentException(sprintf('Controller must be like "ControllerName:ControllerAction", given %s', $controller));
         }
 
-        $controllerName = $arController[0];
+        $controllerName = 'Controller\\' . $arController[0];
         $controllerAction = $arController[1];
 
         if (!class_exists($controllerName)) {
@@ -112,8 +113,7 @@ class Route implements IRoute
             throw new InvalidArgumentException(sprintf('Controller "%s" dont have "%s" action', $controllerName, $controllerAction));
         }
 
-        // тут вызов DI
-        return (new $controllerName)->$controllerAction();
+        return Container::resolveMethodDependencies(Container::getService($controllerName), $controllerAction);
     }
 
     /**
