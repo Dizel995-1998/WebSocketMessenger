@@ -6,7 +6,7 @@ interface InputInterface
 {
     public function getCountOfArgs() : int;
 
-    public function getArgument(string $key) : ?string;
+    public function getArgument(string $key, bool $required = false) : ?string;
 
     public function getScriptName() : string;
 }

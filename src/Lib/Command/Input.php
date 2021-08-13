@@ -19,11 +19,15 @@ class Input implements InputInterface
         return count($this->args);
     }
 
-    public function getArgument(string $key): ?string
+    public function getArgument(string $key, bool $required = false): ?string
     {
         $cmdLine = implode(' ', $this->args);
         if (preg_match("~-{$key}\s(?<value>\S+)~", $cmdLine, $matches)) {
             return $matches['value'];
+        }
+
+        if ($required) {
+            throw new \InvalidArgumentException(sprintf('Missing required arg: %s', $key));
         }
 
         return null;
