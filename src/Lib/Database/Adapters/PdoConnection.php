@@ -1,10 +1,10 @@
 <?php
 
-namespace Service\Database;
+namespace Lib\Database\Adapters;
 
+use Lib\Database\Interfaces\IConnection;
+use Lib\Database\Interfaces\IDbResult;
 use PDO;
-use Service\Database\Interfaces\IConnection;
-use Service\Database\Interfaces\IDbResult;
 
 class PdoConnection implements IConnection
 {
@@ -51,5 +51,37 @@ class PdoConnection implements IConnection
     public function query(string $sql): IDbResult
     {
         return new PdoResult($this->getConnection()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * @return bool
+     */
+    public function beginTransaction(): bool
+    {
+        return $this->getConnection()->beginTransaction();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isTransaction(): bool
+    {
+        return $this->getConnection()->inTransaction();
+    }
+
+    /**
+     * @return bool
+     */
+    public function commitTransaction(): bool
+    {
+        return $this->getConnection()->commit();
+    }
+
+    /**
+     * @return bool
+     */
+    public function rollbackTransaction(): bool
+    {
+        return $this->getConnection()->rollBack();
     }
 }

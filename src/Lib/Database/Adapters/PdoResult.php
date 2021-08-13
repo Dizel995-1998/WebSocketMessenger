@@ -1,8 +1,8 @@
 <?php
 
-namespace Service\Database;
+namespace Lib\Database\Adapters;
 
-use Service\Database\Interfaces\IDbResult;
+use Lib\Database\Interfaces\IDbResult;
 
 class PdoResult implements IDbResult
 {

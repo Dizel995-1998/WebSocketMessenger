@@ -2,8 +2,9 @@
 
 namespace Service\Database;
 
-use Service\Database\Interfaces\IConnection;
-use Service\Database\Interfaces\IDbResult;
+
+use Lib\Database\Interfaces\IConnection;
+use Lib\Database\Interfaces\IDbResult;
 
 class Application
 {

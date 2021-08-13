@@ -1,6 +1,6 @@
 <?php
 
-namespace Service\Database\Interfaces;
+namespace Lib\Database\Interfaces;
 
 interface IDbResult
 {

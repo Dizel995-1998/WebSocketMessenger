@@ -3,9 +3,9 @@
 namespace Lib\Database;
 
 use Lib\Container\Container;
+use Lib\Database\Interfaces\IConnection;
+use Lib\Database\Interfaces\IDbResult;
 use RuntimeException;
-use Service\Database\Interfaces\IConnection;
-use Service\Database\Interfaces\IDbResult;
 
 abstract class DataManager
 {
