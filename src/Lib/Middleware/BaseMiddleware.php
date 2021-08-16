@@ -2,21 +2,17 @@
 
 namespace Lib\Middleware;
 
-use Psr\Http\Message\RequestInterface;
+use Lib\Request\Request;
+use Rakit\Validation\Validator;
 
 abstract class BaseMiddleware implements IMiddleware
 {
-    private ?IMiddleware $nextMiddleware = null;
+    protected Validator $validator;
 
-    public function setNext(IMiddleware $nextMiddleware)
+    public function __construct(Validator $validator)
     {
-        $this->nextMiddleware = $nextMiddleware;
+        $this->validator = $validator;
     }
 
-    public function handle(RequestInterface $request)
-    {
-        if ($this->nextMiddleware) {
-            $this->nextMiddleware->handle($request);
-        }
-    }
+    abstract public function handle(Request $request);
 }

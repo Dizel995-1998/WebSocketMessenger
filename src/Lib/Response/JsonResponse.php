@@ -10,8 +10,8 @@ class JsonResponse extends Response
 
     public function __construct(
         int $status = 200,
-        array $headers = [],
         $body = null,
+        array $headers = [],
         string $version = '1.1',
         string $reason = null
     ) {

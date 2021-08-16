@@ -21,7 +21,7 @@ class Route implements IRoute
         'PUT'
     ];
 
-    /*** @var IMiddleware[] array */
+    /*** @var string[] array */
     private array $arMiddlewares = [];
 
     /*** @var string|callable */
@@ -91,16 +91,19 @@ class Route implements IRoute
     {
         if ($this->arMiddlewares) {
             try {
-                reset($this->arMiddlewares)->handle($request);
+                foreach ($this->arMiddlewares as $middleware) {
+                    Container::resolveMethodDependencies(Container::getService($middleware), 'handle');
+                }
             } catch (Exception $e) {
-                return new Response(200, [], $e->getMessage());
+                // todo дубль кода, должно быть инкапсулировано в классы response
+                return new JsonResponse(422, ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
             }
         }
 
         try {
             return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
         } catch (\Throwable $e) {
-            return new JsonResponse(500, [], ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+            return new JsonResponse(500, ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
         }
     }
 
@@ -135,16 +138,12 @@ class Route implements IRoute
         return Container::getService($controller);
     }
 
-    public function addMiddleware(IMiddleware $middleware) : self
+    public function addMiddleware(string $middleware) : self
     {
-        // TODO оформить в виде вызова сервис провайдера
-        $currentMiddleware = current($this->arMiddlewares);
-        if ($currentMiddleware == null) {
-            $this->arMiddlewares[] = $middleware;
-            return $this;
+        if (array_flip(get_class_methods($middleware))['handle'] === null) {
+            throw new InvalidArgumentException(sprintf('Посредник %s не имеет метода обработчика', $middleware));
         }
 
-        $currentMiddleware->setNext($middleware);
         $this->arMiddlewares[] = $middleware;
         return $this;
     }

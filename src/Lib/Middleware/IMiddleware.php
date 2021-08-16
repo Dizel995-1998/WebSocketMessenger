@@ -2,11 +2,9 @@
 
 namespace Lib\Middleware;
 
-use Psr\Http\Message\RequestInterface;
+use Lib\Request\Request;
 
 interface IMiddleware
 {
-    public function setNext(IMiddleware $nextMiddleware);
-
-    public function handle(RequestInterface $request);
+    public function handle(Request $request);
 }
