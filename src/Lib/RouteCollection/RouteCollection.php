@@ -8,6 +8,9 @@ use Lib\Route\IRoute;
 
 class RouteCollection implements Iterator
 {
+    /**
+     * @var IRoute[]
+     */
     private array $arRoutes = [];
 
     /**
