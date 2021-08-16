@@ -9,6 +9,7 @@ use ReflectionClass;
 use ReflectionProperty;
 use RuntimeException;
 
+// TODO реализовать метод для получения мапы колонок обьекта, чтобы в автоматическом режиме создавать миграции
 abstract class DataManager
 {
     private static ?\PDO $pdoConnection;
@@ -104,14 +105,14 @@ abstract class DataManager
 
             // todo ХАРДКОД !!!
             if (preg_match('~@ORM column_name (?<column_name>\S+)~', $phpDocOfProperty, $matches)) {
-                if ($value = $arDb[$matches['column_name']]) {
-                    $entity->$propName = $value;
+                if (array_key_exists($matches['column_name'], $arDb)) {
+                    $entity->$propName = $arDb[$matches['column_name']];
                     continue;
                 }
             }
 
-            if ($value = $arDb[$propName]) {
-                $entity->$propName = $value;
+            if (isset($arDb[$propName])) {
+                $entity->$propName = $arDb[$propName];
                 continue;
             }
 
@@ -166,5 +167,57 @@ abstract class DataManager
         $dbConn = Container::getService(IConnection::class);
         $query = (new QueryBuilderDeleter((static::class)::getTableName()))->where('ID', $this->id)->getQuery();
         return $dbConn->exec($query);
+    }
+
+    /**
+     * @param string $column
+     * @param string|int|array $value
+     * @return DataManager
+     * @throws \ReflectionException
+     */
+    public static function findByColumnOrFail(string $column, $value) : self
+    {
+        // TODO дубль кода в этом методе и findById
+        $entity = new static();
+        $reflectionClass = new ReflectionClass(static::class);
+        $arProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
+
+        if (empty($arProperties)) {
+            throw new RuntimeException('Entity does not have any property');
+        }
+
+        // todo хардкод
+        $queryBuilder = new QueryBuilderSelector((static::class)::getTableName());
+        $queryBuilder->setFilter([$column => $value]);
+
+        $dbConnection = Container::getService(IConnection::class);
+        $query = $queryBuilder->getQuery();
+        $arDb = $dbConnection->query($query)->fetch();
+
+        if (!$arDb) {
+            throw new RuntimeException(sprintf('Entity: %s with column = %s does not exists', static::class, (string) $value));
+        }
+
+        foreach ($arProperties as $property) {
+            $phpDocOfProperty = $property->getDocComment();
+            $propName = $property->getName();
+
+            // todo ХАРДКОД !!!
+            if (preg_match('~@ORM column_name (?<column_name>\S+)~', $phpDocOfProperty, $matches)) {
+                if (array_key_exists($matches['column_name'], $arDb)) {
+                    $entity->$propName = $arDb[$matches['column_name']];
+                    continue;
+                }
+            }
+
+            if (isset($arDb[$propName])) {
+                $entity->$propName = $arDb[$propName];
+                continue;
+            }
+
+            throw new RuntimeException(sprintf('Can\'t find column for property %s, entity %s', $propName, static::class));
+        }
+
+        return $entity;
     }
 }

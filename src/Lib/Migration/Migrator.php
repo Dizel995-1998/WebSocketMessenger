@@ -23,9 +23,10 @@ class Migrator
 
     public function run(IMigration $migration, bool $rollback = false)
     {
+        $migrationName = basename(str_replace('\\', '/', get_class($migration)));
         /** TODO хардкод колонки  */
-        if (!$rollback && MigrationTable::getList(['filter' => ['MIGRATION_NAME' => get_class($migration)]])->fetch()) {
-            throw new \RuntimeException(sprintf('Migration %s was already executed', get_class($migration)));
+        if (!$rollback && MigrationTable::getList(['filter' => ['MIGRATION_NAME' => $migrationName]])->fetch()) {
+            throw new \RuntimeException(sprintf('Migration %s was already executed', $migrationName));
         }
 
         if (!$this->dbConnection->beginTransaction()) {
@@ -36,11 +37,15 @@ class Migrator
             $rollback ? $migration->down() : $migration->up();
 
             if ($rollback) {
-                $id = MigrationTable::getList(['filter' => ['NAME' => get_class($migration)]])->fetch()['ID'];
-                MigrationTable::findById($id)->delete();
+                try {
+                    (MigrationTable::findByColumnOrFail('MIGRATION_NAME', $migrationName))->delete();
+                } catch (\Throwable $e) {
+                    throw new \RuntimeException('Невозможно откатить миграцию которая не накатывалась');
+                }
             } else {
                 $dbConn = Container::getService(IConnection::class);
-                $dbConn->exec(sprintf('INSERT INTO %s (MIGRATION_NAME) VALUES %s', MigrationTable::getTableName(), $dbConn->quote(get_class($migration))));
+                $query = sprintf('INSERT INTO %s (MIGRATION_NAME) VALUES (%s)', MigrationTable::getTableName(), $dbConn->quote($migrationName));
+                $dbConn->exec($query);
             }
 
             if (!$this->dbConnection->commitTransaction()) {
