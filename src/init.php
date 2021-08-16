@@ -13,8 +13,9 @@ $arMigratorConfig = [
     'pathToMigrations' => '/var/www/src/Migration'
 ];
 
+Container::setService(\Lib\Crypto\ICrypto::class, ['alg' => 'SHA256'], \Lib\Crypto\Crypto::class);
 Container::setService(\Lib\Database\Interfaces\IConnection::class, $arDbConfig, \Lib\Database\Adapters\PdoConnection::class);
-Container::setService(\Lib\Migration\Migrator::class, $arMigratorConfig, \Lib\Migration\Migrator::class);
+Container::setService(\Lib\Migration\Migrator::class, $arMigratorConfig);
 
 /**
  * TODO вынести это говно отсюда
