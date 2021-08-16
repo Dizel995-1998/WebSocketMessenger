@@ -24,6 +24,10 @@ class HttpRouter
     public function run(RouteCollection $routeCollection) : ResponseInterface
     {
         foreach ($routeCollection as $route) {
+            if ($route->getHttpMethod() != $this->request->getMethod()) {
+                continue;
+            }
+
             if (preg_match($route->getPatternUrl(), $this->request->getUri()->getPath())) {
                 return $route->runController($this->request);
             }

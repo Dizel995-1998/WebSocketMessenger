@@ -9,7 +9,7 @@ interface IRoute
 {
     public function getPatternUrl() : string;
 
-    public function getMethodName() : string;
+    public function getHttpMethod() : string;
 
     public function runController(RequestInterface $request) : ResponseInterface;
 }

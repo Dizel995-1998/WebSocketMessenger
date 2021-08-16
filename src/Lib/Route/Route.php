@@ -68,7 +68,7 @@ class Route implements IRoute
      * Возвращает HTTP метод роута
      * @return string
      */
-    public function getMethodName(): string
+    public function getHttpMethod(): string
     {
         return $this->method;
     }
