@@ -6,13 +6,29 @@ use Lib\Container\Container;
 use Lib\Database\Interfaces\IConnection;
 use Lib\Database\Interfaces\IDbResult;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionProperty;
 use RuntimeException;
 
-// TODO реализовать метод для получения мапы колонок обьекта, чтобы в автоматическом режиме создавать миграции
 abstract class DataManager
 {
-    private static ?\PDO $pdoConnection;
+    /**
+     * Название колонки для первичного ключа
+     * @var string
+     */
+    protected static string $primaryKeyColumn = '';
+
+    /**
+     * Название свойства для первичного ключа
+     * @var string
+     */
+    protected static string $primaryKeyProperty = '';
+
+    /**
+     * Мапинг колонок таблицы и свойств обьекта
+     * @var array
+     */
+    protected static array $objectMap = [];
 
     const DEFAULT_RUNTIME_JOIN_TYPE = 'LEFT';
 
@@ -21,6 +37,10 @@ abstract class DataManager
         return Container::getService(IConnection::class);
     }
 
+    /**
+     * Возвращает название таблицы для которой сущность яв-ся отображением
+     * @return string
+     */
     abstract public static function getTableName() : string;
 
     /**
@@ -30,12 +50,9 @@ abstract class DataManager
     public static function getList(array $parameters) : IDbResult
     {
         // TODO сделать свои виды исключений для ORM
+        $tableName = (static::class)::getTableName();
 
-        if (!$tableName = (static::class)::getTableName()) {
-            throw new \RuntimeException('Method "getTableName" can\'t return empty string');
-        }
-
-        // todo хардкод
+        // todo через DI
         $query = new QueryBuilderSelector($tableName);
 
         // TODO тут необходима проверка, если в селекте не указано не одно из полей, то необходимо сформировать дефолтные алиасы для связанных сущностей
@@ -68,156 +85,179 @@ abstract class DataManager
             }
         }
 
-        // TODO вызов событий в более абстрактной сущности
-
         return self::getConnection()->query($query->getQuery());
     }
 
     /**
-     * TODO перейти на пхп 8.0 чтобы избавиться от self в возвращаемом типе, вписать static
      * @param int $id
      * @return static::class
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
-    public static function findById(int $id) : self
+    public static function findByPrimaryKeyOrFail(int $id) : self
     {
         $entity = new static();
-        $reflectionClass = new ReflectionClass(static::class);
-        $arProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
-
-        if (empty($arProperties)) {
-            throw new RuntimeException('Entity does not have any property');
-        }
-
-        // todo хардкод
-        $QueryBuilderSelector = new QueryBuilderSelector(static::getTableName());
-        $QueryBuilderSelector->setFilter(['ID' => $id]);
         $dbConnection = Container::getService(IConnection::class);
-        $arDb = $dbConnection->query($QueryBuilderSelector->getQuery())->fetch();
+        self::getMappingEntity();
+
+        // TODO избавиться от непосредственного вызова билдера тут
+        $arDb = $dbConnection->query(
+            (new QueryBuilderSelector(static::getTableName()))
+                ->setFilter([self::$primaryKeyColumn => $id])
+                ->getQuery())
+            ->fetch();
 
         if (!$arDb) {
             throw new RuntimeException(sprintf('Entity: %s with id %d does not exists', static::class, $id));
         }
 
-        foreach ($arProperties as $property) {
-            $phpDocOfProperty = $property->getDocComment();
-            $propName = $property->getName();
-
-            // todo ХАРДКОД !!!
-            if (preg_match('~@ORM column_name (?<column_name>\S+)~', $phpDocOfProperty, $matches)) {
-                if (array_key_exists($matches['column_name'], $arDb)) {
-                    $entity->$propName = $arDb[$matches['column_name']];
-                    continue;
-                }
-            }
-
-            if (isset($arDb[$propName])) {
-                $entity->$propName = $arDb[$propName];
+        foreach (self::$objectMap as $objectPropertyName => $columnName) {
+            if (isset($arDb[$columnName])) {
+                $entity->$objectPropertyName = $arDb[$columnName];
                 continue;
             }
 
-            throw new RuntimeException(sprintf('Can\'t find column for property %s, entity %s', $propName, static::class));
+            throw new RuntimeException(sprintf('Can\'t find column for property %s, entity %s', $objectPropertyName, static::class));
         }
 
         return $entity;
     }
 
+    /**
+     * Сохранение сущности в БД
+     * @return bool
+     * @throws ReflectionException
+     */
     public function save() : bool
     {
-        // TODO дубль кода
-        $reflectionClass = new ReflectionClass(static::class);
-        $arProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
-        $arColumnNamePropName = [];
+        self::getMappingEntity();
+        $dbConn = Container::getService(IConnection::class);
+        $propPrimaryKey = self::$primaryKeyProperty;
 
-        foreach ($arProperties as $property) {
-            $phpDocOfProperty = $property->getDocComment();
+        if ($this->$propPrimaryKey === null) {
+            $arUpdate = [];
 
-            // todo ХАРДКОД !!!
-            if (preg_match('~@ORM column_name (?<column_name>\S+)~', $phpDocOfProperty, $matches)) {
-                $arColumnNamePropName[$matches['column_name']] = $property->getValue($this);
-                continue;
+            foreach (self::$objectMap as $propertyName => $columnName) {
+                $arUpdate[$columnName] = $this->$propertyName;
             }
 
-            $arColumnNamePropName[$property->getName()] = $property->getValue($this);
+            $query = (new QueryBuilderInserter((static::class)::getTableName()))
+                ->insert($arUpdate)
+                ->getQuery();
+
+            if ($res = $dbConn->exec($query)) {
+                $this->$propPrimaryKey = $dbConn->getLastInsertId();
+            }
+
+            return $res;
         }
 
-        if (!$arColumnNamePropName) {
-            throw new RuntimeException('There is no properties for update');
+        $builder = new QueryBuilderUpdater((static::class)::getTableName());
+
+        foreach (self::$objectMap as $propertyObjectName => $columnName) {
+            $builder->set($columnName, $this->$propertyObjectName);
         }
 
-        $dbConn = Container::getService(IConnection::class);
-
-        /** Процедура построения UPDATE запроса todo жёсткий хардкод, должно быть в QueryBuilderSelector */
-        $queryBuilderUpdater = new QueryBuilderUpdater((static::class)::getTableName());
-
-        foreach ($arColumnNamePropName as $columnName => $value) {
-            $queryBuilderUpdater->set($columnName, $value);
-        }
-
-        // TODO хардкод ключа ID
-        $queryBuilderUpdater->where('ID', $this->id);
-
-        $query = $queryBuilderUpdater->getQuery();
+        $query = $builder->where(self::$primaryKeyColumn, $this->$propPrimaryKey)->getQuery();
         return $dbConn->exec($query);
     }
 
     public function delete()
     {
-        // TODO хардкод ключа ID
-        $dbConn = Container::getService(IConnection::class);
-        $query = (new QueryBuilderDeleter((static::class)::getTableName()))->where('ID', $this->id)->getQuery();
-        return $dbConn->exec($query);
+        self::getMappingEntity();
+        // todo поменять тип хранения primaryKey, должнен быть не строкой а массивом, ['название_свойства' => 'название_колонки']
+        $query = (new QueryBuilderDeleter((static::class)::getTableName()))
+            ->where(self::$primaryKeyColumn, $this->id)
+            ->getQuery();
+
+        return Container::getService(IConnection::class)->exec($query);
     }
 
     /**
      * @param string $column
      * @param string|int|array $value
      * @return DataManager
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public static function findByColumnOrFail(string $column, $value) : self
     {
-        // TODO дубль кода в этом методе и findById
-        $entity = new static();
-        $reflectionClass = new ReflectionClass(static::class);
-        $arProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
-
-        if (empty($arProperties)) {
-            throw new RuntimeException('Entity does not have any property');
-        }
-
-        // todo хардкод
-        $queryBuilder = new QueryBuilderSelector((static::class)::getTableName());
-        $queryBuilder->setFilter([$column => $value]);
-
+        self::getMappingEntity();
         $dbConnection = Container::getService(IConnection::class);
-        $query = $queryBuilder->getQuery();
-        $arDb = $dbConnection->query($query)->fetch();
+        $entity = new static();
+        $query = (new QueryBuilderSelector((static::class)::getTableName()))
+            ->setFilter([$column => $value])
+            ->getQuery();
 
-        if (!$arDb) {
+        if (!$arDb = $dbConnection->query($query)->fetch()) {
             throw new RuntimeException(sprintf('Entity: %s with column = %s does not exists', static::class, (string) $value));
         }
 
-        foreach ($arProperties as $property) {
-            $phpDocOfProperty = $property->getDocComment();
-            $propName = $property->getName();
-
-            // todo ХАРДКОД !!!
-            if (preg_match('~@ORM column_name (?<column_name>\S+)~', $phpDocOfProperty, $matches)) {
-                if (array_key_exists($matches['column_name'], $arDb)) {
-                    $entity->$propName = $arDb[$matches['column_name']];
-                    continue;
-                }
+        foreach (self::$objectMap as $propertyName => $columnName) {
+            if (!array_key_exists($columnName, $arDb)) {
+                throw new RuntimeException(sprintf('Table dont have %s column', $columnName));
             }
 
-            if (isset($arDb[$propName])) {
-                $entity->$propName = $arDb[$propName];
-                continue;
-            }
-
-            throw new RuntimeException(sprintf('Can\'t find column for property %s, entity %s', $propName, static::class));
+            $entity->$propertyName = $arDb[$columnName];
         }
 
         return $entity;
+    }
+
+    /**
+     * Формирует массив вида propertyName => columnName
+     * @return void
+     */
+    public static function getMappingEntity() : void
+    {
+        if (self::$objectMap) {
+            return;
+        }
+
+        self::$primaryKeyColumn = '';
+        self::$primaryKeyProperty = '';
+
+        $reflectionClass = new ReflectionClass(static::class);
+        $entityProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
+
+        if (empty($entityProperties)) {
+            throw new RuntimeException('Entity does not have any property');
+        }
+
+        foreach ($entityProperties as $property) {
+            $phpDocOfProperty = $property->getDocComment();
+            $propName = $property->getName();
+
+            if ($primaryKeyColumn = self::findTagInPhpDoc('primary_key', $phpDocOfProperty)) {
+                if (self::$primaryKeyColumn) {
+                    throw new RuntimeException(sprintf('Duplicate primary key in entity %s', static::class));
+                }
+
+                self::$primaryKeyColumn = $primaryKeyColumn;
+                self::$primaryKeyProperty = $propName;
+            }
+
+            if ($columnName = self::findTagInPhpDoc('column_name', $phpDocOfProperty)) {
+                self::$objectMap[$propName] = $columnName;
+            }
+        }
+
+        if (empty(self::$objectMap)) {
+            throw new RuntimeException(sprintf('Entity %s dont have any property', static::class));
+        }
+
+        if (!self::$primaryKeyColumn) {
+            throw new RuntimeException('Not found primary key');
+        }
+    }
+
+    /**
+     * Поиск служебных данных в phpDoc сущности для работы ОРМ
+     * @param string $key
+     * @param string $phpDoc
+     * @return string|null
+     */
+    public static function findTagInPhpDoc(string $key, string $phpDoc) : ?string
+    {
+        preg_match("~@ORM {$key} (?<{$key}>\S+)~", $phpDoc, $matches);
+        return $matches[$key];
     }
 }

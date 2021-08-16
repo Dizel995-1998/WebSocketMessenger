@@ -94,4 +94,14 @@ class PdoConnection implements IConnection
     {
         return (string) $this->getConnection()->quote($expression);
     }
+
+    /**
+     * Возвоащает ID последней вставленной записи
+     * @return int|null
+     */
+    public function getLastInsertId(): ?int
+    {
+        return empty($id = $this->getConnection()->lastInsertId()) ?
+            null : $id;
+    }
 }

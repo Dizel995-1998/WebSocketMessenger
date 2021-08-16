@@ -7,10 +7,11 @@ use Lib\Database\DataManager;
 class UserTable extends DataManager
 {
     /**
+     * @ORM primary_key ID
      * @ORM column_name ID
-     * @var int
+     * @var int|null
      */
-    public int $id;
+    public ?int $id = null;
 
     /**
      * @ORM column_name NAME

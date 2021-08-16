@@ -9,22 +9,20 @@ class QueryBuilderInserter extends QueryBuilder
     protected array $fields;
     protected array $values;
 
-    public function __construct(string $tableName)
-    {
-        parent::__construct($tableName);
-    }
-
     /**
      * @param array $fields
+     * @return self
      */
-    public function insert(array $fields)
+    public function insert(array $fields) : self
     {
         // todo проверка на ассоциативный массив
 
         foreach ($fields as $field => $value) {
             $this->fields[] = $field;
-            $this->values[] = is_string($value) ? $this->escapeString($value) : $value;
+            $this->values[] = is_int($value) ? $value : $this->escapeString($value ?: '');
         }
+
+        return $this;
     }
 
     /**

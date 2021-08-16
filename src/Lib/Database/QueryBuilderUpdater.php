@@ -86,6 +86,7 @@ class QueryBuilderUpdater extends QueryBuilder
             throw new RuntimeException('Can not generate query without where condition');
         }
 
+        // todo сделать проверку на ON DUPLICATE
         return sprintf('UPDATE %s SET %s WHERE %s', $this->tableName, implode(',', $this->querySetter), $this->queryWhere);
     }
 }

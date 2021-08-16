@@ -17,4 +17,6 @@ interface IConnection
     public function rollbackTransaction() : bool;
 
     public function quote(string $expression) : string;
+
+    public function getLastInsertId() : ?int;
 }
