@@ -1,9 +1,10 @@
 {
     "require": {
         "guzzlehttp/guzzle": "^7.3",
-        "ext-http": "*",
-        "ext-json": "*",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "rakit/validation": "^1.4",
+      "ext-json": "*",
+      "ext-mbstring": "*"
     },
     "autoload": {
         "psr-4": {
