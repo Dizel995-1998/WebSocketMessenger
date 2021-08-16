@@ -2,8 +2,9 @@
 
 namespace Lib\Jwt;
 
+use InvalidArgumentException;
 use JsonException;
-use Lib\Crypto\Crypto;
+use Lib\Container\Container;
 use Lib\Crypto\ICrypto;
 use RuntimeException;
 
@@ -12,20 +13,15 @@ class JwtToken
     private ICrypto $crypt;
     private array $payload;
 
-    public function __construct(array $arData, ICrypto $crypt)
+    public function __construct(ICrypto $crypt, array $payload = [])
     {
         $this->crypt = $crypt;
-        $this->payload = $arData;
+        $this->payload = $payload;
     }
 
     private function generateHeader() : string
     {
-        return base64url_encode(json_encode(['alg' => $this->crypt->getAlgCrypt(), 'typ' => 'JWT']));
-    }
-
-    public function getPayload() : array
-    {
-        return $this->payload;
+        return base64url_encode(json_encode(['alg' => $this->crypt->getAlgCrypt()]));
     }
 
     private function generateSigner(string $header, string $payload) : string
@@ -33,14 +29,14 @@ class JwtToken
         return base64url_encode($this->crypt->cryptInfo($header . '.' . $payload));
     }
 
-    public function appendToPayload(array $appendToPayload)
-    {
-        $this->payload = array_merge($this->payload, $appendToPayload);
-    }
-
     public function setPayload(array $payload)
     {
         $this->payload = $payload;
+    }
+
+    public function getPayload() : array
+    {
+        return $this->payload;
     }
 
     public function __toString()
@@ -51,24 +47,44 @@ class JwtToken
     }
 
     /**
-     * @throws JsonException
+     * @throws JsonException|\ReflectionException
      */
     public static function parse(string $jwtToken) : self
     {
         $arTokenParts = explode('.', $jwtToken);
 
         if (count($arTokenParts) != 3) {
-            throw new RuntimeException('невалидный токен, токен должен содержать 3 части');
+            throw new RuntimeException('Token must consist three parts');
         }
 
-        if (!$payload = json_decode(base64url_decode($arTokenParts[1]), true)) {
-            throw new JsonException('Invalid payload json');
+        if (!$header = ($arTokenParts[0])) {
+            throw new InvalidArgumentException('Invalid jwt header json');
         }
 
-        if (!$alg = json_decode(base64url_decode($arTokenParts[0]), true)['alg']) {
-            throw new JsonException('Header dont have alg key');
+        if (!$payload = ($arTokenParts[1])) {
+            throw new InvalidArgumentException('Invalid jwt payload json');
         }
 
-        return new self($payload, new Crypto($alg));
+        if (!$signature = ($arTokenParts[2])) {
+            throw new InvalidArgumentException('Invalid jwt signature json');
+        }
+
+
+        if (!$arPayload = json_decode(base64_decode($payload), true)) {
+            throw new JsonException('Invalid jwt json payload');
+        }
+
+        if (!json_decode(base64_decode($header), true)['alg']) {
+            throw new InvalidArgumentException('Header dont have alg key');
+        }
+
+        $crypt = Container::getService(ICrypto::class);
+        $signatureHash = base64url_encode($crypt->cryptInfo($header . '.' . $payload));
+
+        if ($signatureHash != $signature) {
+            throw new InvalidArgumentException('Invalid signature');
+        }
+
+        return new self(Container::getService(ICrypto::class), $arPayload);
     }
 }
