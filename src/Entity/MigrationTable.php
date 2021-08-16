@@ -16,7 +16,7 @@ class MigrationTable extends DataManager
      * @ORM column_name MIGRATION_NAME
      * @var string
      */
-    public string $migrationName;
+    public string $name;
 
     public static function getTableName(): string
     {

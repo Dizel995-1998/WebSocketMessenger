@@ -35,7 +35,7 @@ abstract class DataManager
         }
 
         // todo хардкод
-        $query = new QueryBuilder($tableName);
+        $query = new QueryBuilderSelector($tableName);
 
         // TODO тут необходима проверка, если в селекте не указано не одно из полей, то необходимо сформировать дефолтные алиасы для связанных сущностей
 
@@ -73,11 +73,12 @@ abstract class DataManager
     }
 
     /**
+     * TODO перейти на пхп 8.0 чтобы избавиться от self в возвращаемом типе, вписать static
      * @param int $id
      * @return static::class
      * @throws \ReflectionException
      */
-    public static function findById(int $id) : ?self
+    public static function findById(int $id) : self
     {
         $entity = new static();
         $reflectionClass = new ReflectionClass(static::class);
@@ -88,14 +89,13 @@ abstract class DataManager
         }
 
         // todo хардкод
-        $queryBuilder = new QueryBuilder(static::getTableName());
-        $queryBuilder->setFilter(['ID' => $id]);
+        $QueryBuilderSelector = new QueryBuilderSelector(static::getTableName());
+        $QueryBuilderSelector->setFilter(['ID' => $id]);
         $dbConnection = Container::getService(IConnection::class);
-        $arDb = $dbConnection->query($queryBuilder->getQuery())->fetch();
+        $arDb = $dbConnection->query($QueryBuilderSelector->getQuery())->fetch();
 
         if (!$arDb) {
-            return null;
-            //throw new RuntimeException(sprintf('Entity: %s with id %d does not exists', static::class, $id));
+            throw new RuntimeException(sprintf('Entity: %s with id %d does not exists', static::class, $id));
         }
 
         foreach ($arProperties as $property) {
@@ -144,22 +144,27 @@ abstract class DataManager
             throw new RuntimeException('There is no properties for update');
         }
 
-        $arUpdatesFileds = [];
         $dbConn = Container::getService(IConnection::class);
 
-        /** Процедура построения UPDATE запроса todo жёсткий хардкод, должно быть в queryBUilder */
+        /** Процедура построения UPDATE запроса todo жёсткий хардкод, должно быть в QueryBuilderSelector */
+        $queryBuilderUpdater = new QueryBuilderUpdater((static::class)::getTableName());
+
         foreach ($arColumnNamePropName as $columnName => $value) {
-            $arUpdatesFileds[] = $columnName . ' = ' . (is_numeric($value) ? $value : $dbConn->quote($value));
+            $queryBuilderUpdater->set($columnName, $value);
         }
 
-        $query = sprintf('UPDATE %s SET %s WHERE id = %d', (static::class)::getTableName(), implode(',', $arUpdatesFileds), $this->id);
+        // TODO хардкод ключа ID
+        $queryBuilderUpdater->where('ID', $this->id);
+
+        $query = $queryBuilderUpdater->getQuery();
         return $dbConn->exec($query);
     }
 
     public function delete()
     {
+        // TODO хардкод ключа ID
         $dbConn = Container::getService(IConnection::class);
-        $query = sprintf('DELETE FROM %s WHERE id = %d', (static::class)::getTableName(), $this->id);
+        $query = (new QueryBuilderDeleter((static::class)::getTableName()))->where('ID', $this->id)->getQuery();
         return $dbConn->exec($query);
     }
 }
