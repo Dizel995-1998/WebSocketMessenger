@@ -6,6 +6,7 @@ use Exception;
 use InvalidArgumentException;
 use Lib\Container\Container;
 use Lib\Middleware\IMiddleware;
+use Lib\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\RequestInterface;
 use GuzzleHttp\Psr7\Response;
@@ -74,7 +75,9 @@ class Route implements IRoute
 
     /**
      * Запускает контроллер роута
+     * @param RequestInterface $request
      * @return ResponseInterface
+     * @throws \ReflectionException
      */
     public function runController(RequestInterface $request): ResponseInterface
     {
@@ -86,13 +89,18 @@ class Route implements IRoute
             }
         }
 
-        return is_string($this->controller) ? $this->runStringController($this->controller) : $this->runCallableController($this->controller);
+        try {
+            return is_string($this->controller) ? $this->runStringController($this->controller) : $this->runCallableController($this->controller);
+        } catch (\Throwable $e) {
+            return new JsonResponse(500, [], ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+        }
     }
 
     /**
      * Запуск контроллера оформленного в виде класса
      * @param string $controller
      * @return ResponseInterface
+     * @throws \ReflectionException
      */
     private function runStringController(string $controller) : ResponseInterface
     {
@@ -102,6 +110,7 @@ class Route implements IRoute
             throw new InvalidArgumentException(sprintf('Controller must be like "ControllerName:ControllerAction", given %s', $controller));
         }
 
+        // todo хардкод пространства имён
         $controllerName = 'Controller\\' . $arController[0];
         $controllerAction = $arController[1];
 
@@ -120,15 +129,16 @@ class Route implements IRoute
      * Вызов контроллера оформленного в виде callable функции
      * @param callable $controller
      * @return ResponseInterface
+     * @throws \ReflectionException
      */
     private function runCallableController(callable $controller) : ResponseInterface
     {
-        // тут вызов DI контейнера
-        return $controller();
+        return Container::getService($controller);
     }
 
     public function addMiddleware(IMiddleware $middleware) : self
     {
+        // TODO оформить в виде вызова сервис провайдера
         $currentMiddleware = current($this->arMiddlewares);
         if ($currentMiddleware == null) {
             $this->arMiddlewares[] = $middleware;
