@@ -1,6 +1,12 @@
 <?php
 
 use Lib\Container\Container;
+use Lib\Crypto\Crypto;
+use Lib\Crypto\ICrypto;
+use Lib\Database\Adapters\PdoConnection;
+use Lib\Database\Interfaces\IConnection;
+use Lib\Migration\Migrator;
+use Lib\Request\Request;
 
 $arDbConfig = [
     'dbHost' => 'mysql',
@@ -13,9 +19,19 @@ $arMigratorConfig = [
     'pathToMigrations' => '/var/www/src/Migration'
 ];
 
-Container::setService(\Lib\Crypto\ICrypto::class, ['alg' => 'SHA256'], \Lib\Crypto\Crypto::class);
-Container::setService(\Lib\Database\Interfaces\IConnection::class, $arDbConfig, \Lib\Database\Adapters\PdoConnection::class);
-Container::setService(\Lib\Migration\Migrator::class, $arMigratorConfig);
+$arRequestConfig = [
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'uri' => $_SERVER['REQUEST_URI'],
+    'headers' => getallheaders(),
+    'body' => file_get_contents('php://input'),
+    'requestData' => $_REQUEST
+];
+
+Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
+Container::setService(IConnection::class, $arDbConfig, PdoConnection::class);
+Container::setService(Migrator::class, $arMigratorConfig);
+Container::setService(Request::class, $arRequestConfig);
+
 
 /**
  * TODO вынести это говно отсюда

@@ -33,15 +33,22 @@ class Route implements IRoute
     /*** @var string  */
     private string $method;
 
+    /** @var string  */
+    private string $controllerAction;
+
     /**
      * @param string|callable $controller - контроллер
      * @param string $patternUrl - URL паттерн согласно POSIX regex
      * @param string $method - HTTP метод на который заточен данный роут
      */
-    public function __construct(string $patternUrl, string $method, $controller)
+    public function __construct(string $patternUrl, string $method, $controller, string $action = '')
     {
         if (!is_string($controller) && !is_callable($controller)) {
             throw new InvalidArgumentException('Controller must be string or callable types');
+        }
+
+        if ($action && !is_string($controller)) {
+            throw new InvalidArgumentException('Action arg must set only if you use controller class');
         }
 
         $method = strtoupper($method);
@@ -53,6 +60,7 @@ class Route implements IRoute
         $this->patternUrl = $patternUrl;
         $this->method = $method;
         $this->controller = $controller;
+        $this->controllerAction = $action;
     }
 
     /**
@@ -90,7 +98,7 @@ class Route implements IRoute
         }
 
         try {
-            return is_string($this->controller) ? $this->runStringController($this->controller) : $this->runCallableController($this->controller);
+            return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
         } catch (\Throwable $e) {
             return new JsonResponse(500, [], ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
         }
@@ -98,22 +106,13 @@ class Route implements IRoute
 
     /**
      * Запуск контроллера оформленного в виде класса
-     * @param string $controller
+     * @param string $controllerName
+     * @param string $controllerAction
      * @return ResponseInterface
      * @throws \ReflectionException
      */
-    private function runStringController(string $controller) : ResponseInterface
+    private function runStringController(string $controllerName, string $controllerAction) : ResponseInterface
     {
-        $arController = explode(':', $controller);
-
-        if (count($arController) != 2) {
-            throw new InvalidArgumentException(sprintf('Controller must be like "ControllerName:ControllerAction", given %s', $controller));
-        }
-
-        // todo хардкод пространства имён
-        $controllerName = 'Controller\\' . $arController[0];
-        $controllerAction = $arController[1];
-
         if (!class_exists($controllerName)) {
             throw new InvalidArgumentException(sprintf('Controller: %s not found', $controllerName));
         }
