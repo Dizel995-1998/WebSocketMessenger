@@ -13,6 +13,8 @@ class JwtToken
     private ICrypto $crypt;
     private array $payload;
 
+    const TIME_TOKEN_LIVE_DAYS = 5;
+
     public function __construct(ICrypto $crypt, array $payload = [])
     {
         $this->crypt = $crypt;
@@ -21,7 +23,10 @@ class JwtToken
 
     private function generateHeader() : string
     {
-        return base64url_encode(json_encode(['alg' => $this->crypt->getAlgCrypt()]));
+        return base64url_encode(json_encode([
+            'alg' => $this->crypt->getAlgCrypt(),
+            'expires_in' => (new \DateTime(sprintf('+%d day', self::TIME_TOKEN_LIVE_DAYS)))->getTimestamp()
+        ]));
     }
 
     private function generateSigner(string $header, string $payload) : string
