@@ -3,8 +3,11 @@
 namespace Lib\Migration;
 
 use Entity\MigrationTable;
+use InvalidArgumentException;
 use Lib\Container\Container;
 use Lib\Database\Interfaces\IConnection;
+use RuntimeException;
+use Throwable;
 
 class Migrator
 {
@@ -14,7 +17,7 @@ class Migrator
     public function __construct(IConnection $dbConnection, string $pathToMigrations)
     {
         if (!is_dir($pathToMigrations)) {
-            throw new \InvalidArgumentException(sprintf('Migration dir: %s not found', $pathToMigrations));
+            throw new InvalidArgumentException(sprintf('Migration dir: %s not found', $pathToMigrations));
         }
 
         $this->dbConnection = $dbConnection;
@@ -26,21 +29,19 @@ class Migrator
         $migrationName = basename(str_replace('\\', '/', get_class($migration)));
         /** TODO хардкод колонки  */
         if (!$rollback && MigrationTable::getList(['filter' => ['MIGRATION_NAME' => $migrationName]])->fetch()) {
-            throw new \RuntimeException(sprintf('Migration %s was already executed', $migrationName));
+            throw new RuntimeException(sprintf('Миграция %s уже была выполнена', $migrationName));
         }
 
         if (!$this->dbConnection->beginTransaction()) {
-            throw new \RuntimeException('Can\'t start transaction');
+            throw new RuntimeException('Can\'t start transaction');
         }
 
         try {
-            $rollback ? $migration->down() : $migration->up();
-
             if ($rollback) {
                 try {
                     (MigrationTable::findByColumnOrFail('MIGRATION_NAME', $migrationName))->delete();
-                } catch (\Throwable $e) {
-                    throw new \RuntimeException('Невозможно откатить миграцию которая не накатывалась');
+                } catch (Throwable $e) {
+                    throw new RuntimeException('Невозможно откатить миграцию которая не накатывалась');
                 }
             } else {
                 $dbConn = Container::getService(IConnection::class);
@@ -48,24 +49,18 @@ class Migrator
                 $dbConn->exec($query);
             }
 
+            $rollback ? $migration->down() : $migration->up();
+
             if (!$this->dbConnection->commitTransaction()) {
-                throw new \RuntimeException('Can\'t commit transaction');
+                throw new RuntimeException('Can\'t commit transaction');
             }
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             if (!$this->dbConnection->rollbackTransaction()) {
-                throw new \RuntimeException('Can\'t rollback transaction');
+                throw new RuntimeException('Can\'t rollback transaction');
             }
 
-            throw new \RuntimeException(sprintf('Migration error: %s', $e->getMessage()));
+            throw new RuntimeException(sprintf('Migration error: %s', $e->getMessage()));
         }
-    }
-
-    /**
-     * TODO реализовать тип коллекций
-     * Должен принимать коллекцию миграций
-     */
-    public function runAll()
-    {
     }
 }
