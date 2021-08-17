@@ -2,10 +2,10 @@
 
 namespace Lib\Response;
 
-class BadRequest extends HttpErrorException
+class Forbidden extends HttpErrorException
 {
     public function getHttpErrorCode(): int
     {
-        return 400;
+        return 403;
     }
 }

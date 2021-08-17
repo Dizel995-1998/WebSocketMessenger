@@ -2,10 +2,9 @@
 
 namespace Lib\Response;
 
-
 use Throwable;
 
-abstract class AbstractError extends \Exception
+abstract class HttpErrorException extends \Exception
 {
     /**
      * @param string|array $message
@@ -21,11 +20,5 @@ abstract class AbstractError extends \Exception
      * Возвращает код ответа
      * @return int
      */
-    abstract public function getErrorCode() : int;
-
-    /**
-     * Возвращает статус ответа
-     * @return string
-     */
-    abstract public function getErrorStatus() : string;
+    abstract public function getHttpErrorCode() : int;
 }

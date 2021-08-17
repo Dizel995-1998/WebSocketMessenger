@@ -6,6 +6,7 @@ use Exception;
 use InvalidArgumentException;
 use Lib\Container\Container;
 use Lib\Middleware\IMiddleware;
+use Lib\Response\HttpErrorException;
 use Lib\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\RequestInterface;
@@ -100,10 +101,11 @@ class Route implements IRoute
             }
         }
 
+
         try {
             return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
-        } catch (\Throwable $e) {
-            return new JsonResponse(500, ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+        } catch (HttpErrorException $e) {
+            return new JsonResponse($e->getHttpErrorCode(), ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
         }
     }
 

@@ -2,10 +2,10 @@
 
 namespace Lib\Response;
 
-class BadRequest extends HttpErrorException
+class NotFound extends HttpErrorException
 {
     public function getHttpErrorCode(): int
     {
-        return 400;
+        return 404;
     }
 }
