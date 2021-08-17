@@ -11,6 +11,7 @@ use Lib\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\RequestInterface;
 use GuzzleHttp\Psr7\Response;
+use Throwable;
 
 class Route implements IRoute
 {
@@ -106,6 +107,8 @@ class Route implements IRoute
             return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
         } catch (HttpErrorException $e) {
             return new JsonResponse($e->getHttpErrorCode(), ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+        } catch (Throwable $e) {
+            return new JsonResponse(400, ['error' => true, 'code' => $e->getMessage()]);
         }
     }
 

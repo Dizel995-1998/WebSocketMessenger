@@ -36,7 +36,7 @@ class HttpRouter
                 }
             } catch (\Throwable $e) {
                 // todo хардкод
-                return new JsonResponse(500, [], $e->getMessage());
+                return new JsonResponse(500, $e->getMessage());
             }
         }
 
