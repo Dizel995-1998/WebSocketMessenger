@@ -11,8 +11,15 @@ class QueryBuilderSelector extends QueryBuilder
     private string $selectQuery = '*';
     private string $filterQuery = '';
     private string $joinQuery = '';
+    protected string $queryWhere;
     private string $groupQuery;
     private string $sortQuery;
+
+    public function __construct(string $tableName)
+    {
+        parent::__construct($tableName);
+        $this->queryWhere = '1 = 1';
+    }
 
     public function setSelect(array $arSelect) : self
     {
@@ -32,35 +39,48 @@ class QueryBuilderSelector extends QueryBuilder
         return $this;
     }
 
+
     /**
-     * TODO реализовать операции больше, меньше, не равно
-     * @param array $arFilter
-     * @return $this
+     * TODO дубль кода в билдерах
+     * На данный момент доступны лишь простые проверки по типу равенства или вхождению в диапазон
+     * @param string $column
+     * @param string|int|array $value
+     * @param bool $isOr - тип условия, OR или AND
+     * @return self
      */
-    public function setFilter(array $arFilter) : self
+    public function where(string $column, $value, bool $isOr = false) : self
     {
-        $buildFilter = function ($arFilter) : array {
-            $arResult = [];
+        if (
+            !is_array($value) &&
+            !is_numeric($value) &&
+            !is_string($value)
+        ) {
+            throw new InvalidArgumentException('Value param must be one of type: string, array, int');
+        }
 
-            foreach ($arFilter as $field => $value) {
-                if (!preg_match('~(?<comparison_operator><|>|!=)?(?<column_name>\S+)~', $field, $matches)) {
-                    throw new InvalidArgumentException(sprintf('Incorrect filter field: %s', $field));
-                }
+        if (is_array($value)) {
+            $this->queryWhere .= sprintf(' %s %s IN (%s)',
+                ($isOr ? 'OR' : 'AND'),
+                $column,
+                implode(',', $value)
+            );
+        }
 
-                $matches['comparison_operator'] = $matches['comparison_operator'] ?: '=';
-                $matches['column_name'] = $this->tableName . '.' . $matches['column_name'];
+        if (is_string($value)) {
+            $this->queryWhere .= sprintf(' %s %s = %s',
+                ($isOr ? 'OR' : 'AND'),
+                $column,
+                $this->escapeString($value)
+            );
+        }
 
-                $arResult[] = is_array($value) ?
-                    sprintf('%s IN (%s)', $matches['column_name'], $this->escapeString(implode(',', $value))) :
-                    sprintf('%s %s %s', $matches['column_name'], $matches['comparison_operator'], $this->escapeString($value));
-            }
-
-            return $arResult;
-        };
-
-        $this->filterQuery = $arFilter['LOGIC_OR'] ?
-            implode(' OR ', $buildFilter($arFilter['LOGIC_OR'])) :
-            implode(' AND ', $buildFilter($arFilter));
+        if (is_int($value)) {
+            $this->queryWhere .= sprintf(' %s %s = %s',
+                ($isOr ? 'OR' : 'AND'),
+                $column,
+                $value
+            );
+        }
 
         return $this;
     }
@@ -105,7 +125,7 @@ class QueryBuilderSelector extends QueryBuilder
 
     public function getQuery() : string
     {
-        if (!$this->filterQuery) {
+        if (!$this->queryWhere) {
             throw new \RuntimeException('Filter must be set, before get query');
         }
 
@@ -113,7 +133,7 @@ class QueryBuilderSelector extends QueryBuilder
             $this->selectQuery ?: '*',
             $this->tableName,
             $this->joinQuery,
-            $this->filterQuery
+            $this->queryWhere
         );
     }
 }
