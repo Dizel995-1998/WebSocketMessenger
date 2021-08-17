@@ -5,7 +5,6 @@ use Lib\Crypto\Crypto;
 use Lib\Crypto\ICrypto;
 use Lib\Database\Adapters\PdoConnection;
 use Lib\Database\Interfaces\IConnection;
-use Lib\Migration\Migrator;
 use Lib\Request\Request;
 
 $arDbConfig = [
@@ -13,10 +12,6 @@ $arDbConfig = [
     'dbUser' => 'root',
     'dbPassword' => 'root',
     'dbName' => 'mydb'
-];
-
-$arMigratorConfig = [
-    'pathToMigrations' => '/var/www/src/Migration'
 ];
 
 $arRequestConfig = [
@@ -29,9 +24,7 @@ $arRequestConfig = [
 
 Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
 Container::setService(IConnection::class, $arDbConfig, PdoConnection::class);
-Container::setService(Migrator::class, $arMigratorConfig);
 Container::setService(Request::class, $arRequestConfig);
-
 
 /**
  * TODO вынести это говно отсюда

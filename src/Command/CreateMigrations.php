@@ -16,10 +16,17 @@ class CreateMigrations extends BaseCommand
 
 namespace Migration;
 
-use Lib\Migration\IMigration;
+use Lib\Database\Interfaces\IConnection;use Lib\Migration\IMigration;
 
-class {$migrationName} implements IMigration
+class $migrationName implements IMigration
 {
+    private IConnection \$dbConnection;
+   
+    public function __construct(IConnection \$dbConnection)
+    {
+        \$this->dbConnection = \$dbConnection;
+    }
+    
     public function up(): void
     {
         // TODO: Implement down() method.

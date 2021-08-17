@@ -4,25 +4,21 @@ namespace Command;
 
 use Lib\Command\BaseCommand;
 use Lib\Container\Container;
-use Lib\Migration\Migrator;
+use Service\MigrationManager;
 
 class MigrationUp extends BaseCommand
 {
     protected string $migrationName;
-    protected Migrator $migrator;
+    protected MigrationManager $migrator;
 
     public function __construct()
     {
-        // TODO костыль
-        $this->migrator = Container::getService(Migrator::class);
+        $this->migrator = Container::getService(MigrationManager::class);
     }
 
     public function execute(): string
     {
-        // TODO вызов DI
-        // TODO попробывать $this->migrationName::class чтобы не писать пространство имён Migration
-        $x = 'Migration\\' . $this->migrationName;
-        $this->migrator->run(new $x());
+        $this->migrator->runMigration('Migration\\' . $this->migrationName);
         return '';
     }
 

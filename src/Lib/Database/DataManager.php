@@ -2,6 +2,7 @@
 
 namespace Lib\Database;
 
+use InvalidArgumentException;
 use Lib\Container\Container;
 use Lib\Database\Interfaces\IConnection;
 use ReflectionClass;
@@ -123,6 +124,19 @@ abstract class DataManager
     }
 
     /**
+     * @param array $filter
+     * @return static|null
+     */
+    public static function findByProperty(array $filter) : ?self
+    {
+        try {
+            return self::findByPropertyOrFail($filter);
+        } catch (RuntimeException $exception) {
+            return null;
+        }
+    }
+
+    /**
      * TODO этот метод должен быть в репозитории
      * @param array $filter
      * @return static::class
@@ -137,7 +151,7 @@ abstract class DataManager
 
         foreach ($filter as $propertyName => $value) {
             if (!property_exists(static::class, $propertyName)) {
-                throw new \InvalidArgumentException(sprintf('Entity %s does not have property %s', static::class, $propertyName));
+                throw new InvalidArgumentException(sprintf('Entity %s does not have property %s', static::class, $propertyName));
             }
 
             $obQuery->where(self::$objectMap[$propertyName], $value);
@@ -146,6 +160,7 @@ abstract class DataManager
         $query = $obQuery->getQuery();
 
         if (!$arDb = self::getConnection()->query($query)->fetch()) {
+            // todo сделать свои виды exception
             throw new RuntimeException(sprintf('Entity %s not found', static::class));
         }
 

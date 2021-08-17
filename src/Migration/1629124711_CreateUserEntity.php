@@ -2,10 +2,8 @@
 
 namespace Migration;
 
-use Lib\Container\Container;
 use Lib\Database\Interfaces\IConnection;
 use Lib\Migration\IMigration;
-use Migration;
 
 class CreateUserEntity implements IMigration
 {
@@ -21,10 +19,10 @@ class CreateUserEntity implements IMigration
     protected string $tableName;
     protected IConnection $dbConnection;
 
-    public function __construct()
+    public function __construct(IConnection $dbConnection)
     {
         $this->tableName = \Entity\UserTable::getTableName();
-        $this->dbConnection = Container::getService(IConnection::class);
+        $this->dbConnection = $dbConnection;
     }
 
     public function up(): void
