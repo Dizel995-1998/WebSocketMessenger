@@ -124,24 +124,29 @@ abstract class DataManager
 
     /**
      * TODO этот метод должен быть в репозитории
-     * @param string $property
-     * @param string|int|array $value
+     * @param array $filter
      * @return static::class
      */
-    public static function findByPropertyOrFail(string $property, $value) : self
+    public static function findByPropertyOrFail(array $filter) : self
     {
-        if (!property_exists(static::class, $property)) {
-            throw new \InvalidArgumentException(sprintf('Entity %s does not have property %s', static::class, $property));
-        }
-
+        // todo проверка на ассотиативный массив
         self::getMappingEntity();
         $entity = new static();
-        $query = (new QueryBuilderSelector((static::class)::getTableName()))
-            ->where(self::$objectMap[$property], $value)
-            ->getQuery();
+
+        $obQuery = new QueryBuilderSelector((static::class)::getTableName());
+
+        foreach ($filter as $propertyName => $value) {
+            if (!property_exists(static::class, $propertyName)) {
+                throw new \InvalidArgumentException(sprintf('Entity %s does not have property %s', static::class, $propertyName));
+            }
+
+            $obQuery->where(self::$objectMap[$propertyName], $value);
+        }
+
+        $query = $obQuery->getQuery();
 
         if (!$arDb = self::getConnection()->query($query)->fetch()) {
-            throw new RuntimeException(sprintf('Entity: %s with column = %s does not exists', static::class, (string) $value));
+            throw new RuntimeException(sprintf('Entity %s not found', static::class));
         }
 
         foreach (self::$objectMap as $propertyName => $columnName) {
