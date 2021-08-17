@@ -123,16 +123,21 @@ abstract class DataManager
     }
 
     /**
-     * @param string $column
+     * TODO этот метод должен быть в репозитории
+     * @param string $property
      * @param string|int|array $value
      * @return static::class
      */
-    public static function findByColumnOrFail(string $column, $value) : self
+    public static function findByPropertyOrFail(string $property, $value) : self
     {
+        if (!property_exists(static::class, $property)) {
+            throw new \InvalidArgumentException(sprintf('Entity %s does not have property %s', static::class, $property));
+        }
+
         self::getMappingEntity();
         $entity = new static();
         $query = (new QueryBuilderSelector((static::class)::getTableName()))
-            ->setFilter([$column => $value])
+            ->where(self::$objectMap[$property], $value)
             ->getQuery();
 
         if (!$arDb = self::getConnection()->query($query)->fetch()) {
@@ -203,7 +208,7 @@ abstract class DataManager
      * @param string $phpDoc
      * @return string|null
      */
-    public static function findTagInPhpDoc(string $key, string $phpDoc) : ?string
+    protected static function findTagInPhpDoc(string $key, string $phpDoc) : ?string
     {
         preg_match("~@ORM {$key} (?<{$key}>\S+)~", $phpDoc, $matches);
         return $matches[$key];
