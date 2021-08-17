@@ -6,6 +6,7 @@ use Entity\UserTable;
 use Lib\Jwt\JwtToken;
 use Lib\Request\Request;
 use Lib\Response\BadRequest;
+use Lib\Response\ServerInternalError;
 use Lib\Response\SuccessResponse;
 use Psr\Http\Message\ResponseInterface;
 use Rakit\Validation\Validator;
@@ -47,5 +48,43 @@ class AuthController
 
         // TODO возвращать необходимо жкземляры классов типа SuccessResponse, BadRequest и т.д, чтобы не хардкодить коды ответа
         return new SuccessResponse(['jwtToken' => (string) $jwtToken]);
+    }
+
+    /**
+     * @throws BadRequest
+     * @throws ServerInternalError
+     */
+    public function createUser(Request $request, Validator $validator, PasswordHash $passwordHash): SuccessResponse
+    {
+        $validation = $validator->make(
+            $request->get(),
+            [
+                'login' => 'required|alpha_dash',
+                'password' => 'required|alpha_dash',
+                'name' => 'required|alpha_dash',
+                'avatar' => 'alpha_dash'
+            ]
+        );
+
+        $validation->validate();
+
+        if ($validation->fails()) {
+            throw new BadRequest($validation->errors()->toArray());
+        }
+
+        if (UserTable::findByProperty(['login' => $request->get('login')])) {
+            throw new BadRequest('User already exist');
+        }
+
+        $user = new UserTable();
+        $user->name = $request->get('name');
+        $user->login = $request->get('login');
+        $user->passwordHash = $passwordHash->hashPassword($request->get('password'));
+        $user->pictureUrl = $request->get('avatar');
+        if (!$user->save()) {
+            throw new ServerInternalError('Cannot create user');
+        }
+
+        return new SuccessResponse('ok');
     }
 }

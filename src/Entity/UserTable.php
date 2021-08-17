@@ -33,9 +33,9 @@ class UserTable extends DataManager
 
     /**
      * @ORM column_name PICTURE_URL
-     * @var string
+     * @var string|null
      */
-    public string $pictureUrl;
+    public ?string $pictureUrl;
 
     public static function getTableName(): string
     {

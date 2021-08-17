@@ -8,6 +8,6 @@ class SuccessResponse extends JsonResponse
 
     public function __construct($body = null, array $headers = [], string $version = '1.1', string $reason = null)
     {
-        parent::__construct(self::HTTP_STATUS_OK, $body, $headers, $version, $reason);
+        parent::__construct(self::HTTP_STATUS_OK, ['success' => true, 'data' => $body], $headers, $version, $reason);
     }
 }
