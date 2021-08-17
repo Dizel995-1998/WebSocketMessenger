@@ -2,38 +2,48 @@
 
 namespace Controller;
 
+use Entity\UserTable;
 use Lib\Jwt\JwtToken;
 use Lib\Request\Request;
+use Lib\Response\BadRequest;
 use Lib\Response\ValidationError;
 use Psr\Http\Message\ResponseInterface;
 use Rakit\Validation\Validator;
+use Service\PasswordHash;
 
 class AuthController
 {
     // todo обращение к сервисному слою для получения токена
-    public function getJwtToken(Request $request, Validator $validator, JwtToken $jwtToken) : ResponseInterface
+    /**
+     * @throws ValidationError
+     * @throws BadRequest
+     */
+    public function getJwtToken(Request $request, Validator $validator, JwtToken $jwtToken, PasswordHash $passwordHash) : ResponseInterface
     {
         $validation = $validator->make(
             $request->get(),
             [
-                'login' => 'required|alpha',
-                'password' => 'required|alpha',
+                'login' => 'required|alpha_dash',
+                'password' => 'required|alpha_dash',
             ]
         );
 
         $validation->validate();
 
         if ($validation->fails()) {
-            throw new ValidationError($validation->errors()->toArray());
+            throw new BadRequest($validation->errors()->toArray());
         }
 
-        // обращение к БД
+        // todo необходимо реализовать экранирование, возможность поиска по нескольким полям
+        $user = UserTable::findByPropertyOrFail('login', $validation->getValue('login'));
 
-        $jwtToken->setPayload([
-            'user_id' => '12312313',
-            'some_information_about_user' => '....'
-        ]);
+        if ($user->passwordHash != $passwordHash->hashPassword($validation->getValue('password'))) {
+            throw new BadRequest('Некорректный пароль');
+        }
 
-        return new \Lib\Response\JsonResponse(200, [], ['jwtToken' => (string) $jwtToken]);
+        $jwtToken->setPayload(['user_id' => $user->id]);
+
+        // TODO возвращать необходимо жкземляры классов типа SuccessResponse, FailResponse, BadRequest и т.д, чтобы не хардкодить коды ответа
+        return new \Lib\Response\JsonResponse(200, ['jwtToken' => (string) $jwtToken]);
     }
 }
