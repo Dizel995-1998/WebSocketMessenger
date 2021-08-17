@@ -4,7 +4,6 @@ namespace Lib\Database;
 
 use Lib\Container\Container;
 use Lib\Database\Interfaces\IConnection;
-use Lib\Database\Interfaces\IDbResult;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -30,11 +29,10 @@ abstract class DataManager
      */
     protected static array $objectMap = [];
 
-    const DEFAULT_RUNTIME_JOIN_TYPE = 'LEFT';
-
     private static function getConnection() : IConnection
     {
-        return Container::getService(IConnection::class);
+        static $instance = null;
+        return $instance ?: $instance = Container::getService(IConnection::class);
     }
 
     /**
@@ -44,51 +42,6 @@ abstract class DataManager
     abstract public static function getTableName() : string;
 
     /**
-     * @param array $parameters
-     * @return IDbResult
-     */
-    public static function getList(array $parameters) : IDbResult
-    {
-        // TODO сделать свои виды исключений для ORM
-        $tableName = (static::class)::getTableName();
-
-        // todo через DI
-        $query = new QueryBuilderSelector($tableName);
-
-        // TODO тут необходима проверка, если в селекте не указано не одно из полей, то необходимо сформировать дефолтные алиасы для связанных сущностей
-
-        $parameters['select'] && $query->setSelect($parameters['select']);
-        $parameters['filter'] && $query->setFilter($parameters['filter']);
-
-        if (isset($parameters['runtime'])) {
-            foreach ($parameters['runtime'] as $runtimeTableAlias => $runtimeEntity) {
-                if (!$runtimeEntity['reference']) {
-                    throw new \InvalidArgumentException('Missing required field "reference" in runtime');
-                }
-
-                if (!is_array($runtimeEntity['reference'])) {
-                    throw new \InvalidArgumentException(sprintf('Field "reference" must have type of array, %s given', gettype($runtimeEntity['reference'])));
-                }
-
-                if (!$runtimeEntity['data_type']) {
-                    throw new \InvalidArgumentException('Missing required field "data_type" in runtime');
-                }
-
-                $runtimeEntity['join_type'] = $runtimeEntity['join_type'] ?: self::DEFAULT_RUNTIME_JOIN_TYPE;
-
-                if (!(new $runtimeEntity['data_type']) instanceof DataManager) {
-                    throw new RuntimeException('Runtime entity must have parent DataManager');
-                }
-
-                $runtimeTable = $runtimeEntity['data_type']::getTableName();
-                $query->setJoin($runtimeTable, $runtimeTableAlias, $runtimeEntity['join_type'], $runtimeEntity['reference']);
-            }
-        }
-
-        return self::getConnection()->query($query->getQuery());
-    }
-
-    /**
      * @param int $id
      * @return static::class
      * @throws ReflectionException
@@ -96,11 +49,10 @@ abstract class DataManager
     public static function findByPrimaryKeyOrFail(int $id) : self
     {
         $entity = new static();
-        $dbConnection = Container::getService(IConnection::class);
         self::getMappingEntity();
 
         // TODO избавиться от непосредственного вызова билдера тут
-        $arDb = $dbConnection->query(
+        $arDb = self::getConnection()->query(
             (new QueryBuilderSelector(static::getTableName()))
                 ->setFilter([self::$primaryKeyColumn => $id])
                 ->getQuery())
@@ -125,12 +77,10 @@ abstract class DataManager
     /**
      * Сохранение сущности в БД
      * @return bool
-     * @throws ReflectionException
      */
     public function save() : bool
     {
         self::getMappingEntity();
-        $dbConn = Container::getService(IConnection::class);
         $propPrimaryKey = self::$primaryKeyProperty;
 
         if ($this->$propPrimaryKey === null) {
@@ -144,11 +94,11 @@ abstract class DataManager
                 ->insert($arUpdate)
                 ->getQuery();
 
-            if ($res = $dbConn->exec($query)) {
-                $this->$propPrimaryKey = $dbConn->getLastInsertId();
+            if ($res = self::getConnection()->exec($query)) {
+                $this->$propPrimaryKey = self::getConnection()->getLastInsertId();
             }
 
-            return $res;
+            return (bool) $res;
         }
 
         $builder = new QueryBuilderUpdater((static::class)::getTableName());
@@ -158,7 +108,7 @@ abstract class DataManager
         }
 
         $query = $builder->where(self::$primaryKeyColumn, $this->$propPrimaryKey)->getQuery();
-        return $dbConn->exec($query);
+        return self::getConnection()->exec($query);
     }
 
     public function delete()
@@ -169,25 +119,23 @@ abstract class DataManager
             ->where(self::$primaryKeyColumn, $this->id)
             ->getQuery();
 
-        return Container::getService(IConnection::class)->exec($query);
+        return self::getConnection()->exec($query);
     }
 
     /**
      * @param string $column
      * @param string|int|array $value
-     * @return DataManager
-     * @throws ReflectionException
+     * @return static::class
      */
     public static function findByColumnOrFail(string $column, $value) : self
     {
         self::getMappingEntity();
-        $dbConnection = Container::getService(IConnection::class);
         $entity = new static();
         $query = (new QueryBuilderSelector((static::class)::getTableName()))
             ->setFilter([$column => $value])
             ->getQuery();
 
-        if (!$arDb = $dbConnection->query($query)->fetch()) {
+        if (!$arDb = self::getConnection()->query($query)->fetch()) {
             throw new RuntimeException(sprintf('Entity: %s with column = %s does not exists', static::class, (string) $value));
         }
 
