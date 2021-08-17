@@ -40,6 +40,6 @@ class HttpRouter
             }
         }
 
-        return new \GuzzleHttp\Psr7\Response(self::HTTP_CODE_NOT_FOUND, [], 'Page not found');
+        return new JsonResponse(self::HTTP_CODE_NOT_FOUND, ['code' => 'not found']);
     }
 }

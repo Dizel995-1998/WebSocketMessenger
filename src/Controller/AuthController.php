@@ -6,7 +6,7 @@ use Entity\UserTable;
 use Lib\Jwt\JwtToken;
 use Lib\Request\Request;
 use Lib\Response\BadRequest;
-use Lib\Response\ValidationError;
+use Lib\Response\SuccessResponse;
 use Psr\Http\Message\ResponseInterface;
 use Rakit\Validation\Validator;
 use Service\PasswordHash;
@@ -15,7 +15,6 @@ class AuthController
 {
     // todo обращение к сервисному слою для получения токена
     /**
-     * @throws ValidationError
      * @throws BadRequest
      */
     public function getJwtToken(Request $request, Validator $validator, JwtToken $jwtToken, PasswordHash $passwordHash) : ResponseInterface
@@ -35,15 +34,18 @@ class AuthController
         }
 
         // todo необходимо реализовать экранирование, возможность поиска по нескольким полям
-        $user = UserTable::findByPropertyOrFail('login', $validation->getValue('login'));
-
-        if ($user->passwordHash != $passwordHash->hashPassword($validation->getValue('password'))) {
-            throw new BadRequest('Некорректный пароль');
+        try {
+            $user = UserTable::findByPropertyOrFail([
+                'login' => $validation->getValue('login'),
+                'passwordHash' => $passwordHash->hashPassword($validation->getValue('password'))
+            ]);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('Incorrect fill password or login field');
         }
 
         $jwtToken->setPayload(['user_id' => $user->id]);
 
-        // TODO возвращать необходимо жкземляры классов типа SuccessResponse, FailResponse, BadRequest и т.д, чтобы не хардкодить коды ответа
-        return new \Lib\Response\JsonResponse(200, ['jwtToken' => (string) $jwtToken]);
+        // TODO возвращать необходимо жкземляры классов типа SuccessResponse, BadRequest и т.д, чтобы не хардкодить коды ответа
+        return new SuccessResponse(['jwtToken' => (string) $jwtToken]);
     }
 }

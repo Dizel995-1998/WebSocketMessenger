@@ -71,7 +71,7 @@ class Route implements IRoute
      */
     public function getPatternUrl(): string
     {
-        return '~' . $this->patternUrl . '~';
+        return '~^' . $this->patternUrl . '$~';
     }
 
     /**
@@ -87,7 +87,6 @@ class Route implements IRoute
      * Запускает контроллер роута
      * @param RequestInterface $request
      * @return ResponseInterface
-     * @throws \ReflectionException
      */
     public function runController(RequestInterface $request): ResponseInterface
     {
@@ -102,12 +101,12 @@ class Route implements IRoute
             }
         }
 
-
         try {
             return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
         } catch (HttpErrorException $e) {
             return new JsonResponse($e->getHttpErrorCode(), ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
         } catch (Throwable $e) {
+            // какая то внутренняя ошибка, или ошибка из сторонних пакетов
             return new JsonResponse(400, ['error' => true, 'code' => $e->getMessage()]);
         }
     }
