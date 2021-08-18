@@ -233,4 +233,13 @@ abstract class DataManager
         preg_match("~@ORM {$key} (?<{$key}>\S+)~", $phpDoc, $matches);
         return $matches[$key];
     }
+
+    /**
+     * Проверяет существует ли таблица в базе данных
+     * @return bool
+     */
+    public static function isTableExists() : bool
+    {
+        return (bool) self::getConnection()->query(sprintf("SHOW TABLES LIKE '%s'", static::getTableName()))->fetch();
+    }
 }
