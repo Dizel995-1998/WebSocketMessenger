@@ -16,8 +16,8 @@ class UserController
         return new SuccessResponse(UserTable::findByPrimaryKeyOrFail($jwtToken->getUserId()));
     }
 
-    public function seeProfile(Request $request): ResponseInterface
+    public function profile($id): ResponseInterface
     {
-
+        return new SuccessResponse(UserTable::findByPrimaryKeyOrFail($id));
     }
 }
