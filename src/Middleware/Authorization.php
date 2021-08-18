@@ -6,13 +6,14 @@ use Lib\Jwt\JwtToken;
 use Lib\Middleware\BaseMiddleware;
 use Lib\Request\Request;
 use Lib\Response\BadRequest;
-use Lib\Response\ValidationError;
 
 class Authorization extends BaseMiddleware
 {
     /**
-     * @throws ValidationError
+     * @param Request $request
      * @throws BadRequest
+     * @throws \JsonException
+     * @throws \ReflectionException
      */
     public function handle(Request $request)
     {
@@ -21,6 +22,6 @@ class Authorization extends BaseMiddleware
             throw new BadRequest('Отсутствует заголовок: authorization');
         }
 
-        //JwtToken::parse($jwtToken);
+        JwtToken::parse($jwtToken);
     }
 }

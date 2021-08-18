@@ -55,7 +55,7 @@ abstract class DataManager
         // TODO избавиться от непосредственного вызова билдера тут
         $arDb = self::getConnection()->query(
             (new QueryBuilderSelector(static::getTableName()))
-                ->setFilter([self::$primaryKeyColumn => $id])
+                ->where(self::$primaryKeyColumn, $id)
                 ->getQuery())
             ->fetch();
 

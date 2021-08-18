@@ -41,12 +41,11 @@ class AuthController
                 'passwordHash' => $passwordHash->hashPassword($validation->getValue('password'))
             ]);
         } catch (\RuntimeException $e) {
-            throw new BadRequest('Incorrect fill password or login field');
+            throw new BadRequest('Invalid login or password');
         }
 
-        $jwtToken->setPayload(['user_id' => $user->id]);
+        $jwtToken->setUserId($user->id);
 
-        // TODO возвращать необходимо жкземляры классов типа SuccessResponse, BadRequest и т.д, чтобы не хардкодить коды ответа
         return new SuccessResponse(['jwtToken' => (string) $jwtToken]);
     }
 
