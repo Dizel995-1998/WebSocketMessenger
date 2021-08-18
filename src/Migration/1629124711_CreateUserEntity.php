@@ -21,7 +21,7 @@ class CreateUserEntity implements IMigration
 
     public function __construct(IConnection $dbConnection)
     {
-        $this->tableName = \Entity\UserTable::getTableName();
+        $this->tableName = \Entity\User::getTableName();
         $this->dbConnection = $dbConnection;
     }
 

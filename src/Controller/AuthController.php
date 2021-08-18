@@ -2,7 +2,7 @@
 
 namespace Controller;
 
-use Entity\UserTable;
+use Entity\User;
 use Lib\Jwt\JwtToken;
 use Lib\Request\Request;
 use Lib\Response\BadRequest;
@@ -36,7 +36,7 @@ class AuthController
 
         // todo необходимо реализовать экранирование, возможность поиска по нескольким полям
         try {
-            $user = UserTable::findByPropertyOrFail([
+            $user = User::findByPropertyOrFail([
                 'login' => $validation->getValue('login'),
                 'passwordHash' => $passwordHash->hashPassword($validation->getValue('password'))
             ]);
@@ -71,11 +71,11 @@ class AuthController
             throw new BadRequest($validation->errors()->toArray());
         }
 
-        if (UserTable::findByProperty(['login' => $request->get('login')])) {
+        if (User::findByProperty(['login' => $request->get('login')])) {
             throw new BadRequest('User already exist');
         }
 
-        $user = new UserTable();
+        $user = new User();
         $user->name = $request->get('name');
         $user->login = $request->get('login');
         $user->passwordHash = $passwordHash->hashPassword($request->get('password'));

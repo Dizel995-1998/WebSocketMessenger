@@ -4,7 +4,7 @@ namespace Entity;
 
 use Lib\Database\DataManager;
 
-class UserTable extends DataManager
+class User extends DataManager
 {
     /**
      * @ORM primary_key ID
