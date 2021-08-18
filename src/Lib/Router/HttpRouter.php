@@ -3,7 +3,6 @@
 namespace Lib\Router;
 
 use Lib\Response\JsonResponse;
-use Lib\Response\ValidationError;
 use Lib\RouteCollection\RouteCollection;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -30,13 +29,17 @@ class HttpRouter
                 continue;
             }
 
-            try {
-                if (preg_match($route->getPatternUrl(), $this->request->getUri()->getPath())) {
-                    return $route->runController($this->request);
+            if (preg_match($route->getPatternUrl(), $this->request->getUri()->getPath(), $matches)) {
+                $newMatches = [];
+                foreach ($matches as $key => $value) {
+                    if (is_int($key)) {
+                        continue;
+                    }
+
+                    $newMatches[$key] = $value;
                 }
-            } catch (\Throwable $e) {
-                // todo хардкод
-                return new JsonResponse(500, $e->getMessage());
+
+                return $route->runController($this->request, $newMatches);
             }
         }
 

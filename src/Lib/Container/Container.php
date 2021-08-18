@@ -147,7 +147,7 @@ class Container implements ContainerInterface
      * @return mixed возвращает результат метода сервиса
      * @throws ReflectionException
      */
-    public static function resolveMethodDependencies(object $service, string $methodName)
+    public static function resolveMethodDependencies(object $service, string $methodName, array $additionalArgs = [])
     {
         if (!method_exists($service, $methodName)) {
             throw new \InvalidArgumentException(sprintf('Service: %s dont have %s method', get_class($service), $methodName));
@@ -169,6 +169,12 @@ class Container implements ContainerInterface
 
             if ($dependencyClass = $arg->getClass()) {
                 $arDependencies[] = self::getService($dependencyClass->getName());
+                continue;
+            }
+
+            // примитивные типы не имеющие дефолтных значений
+            if ($value = $additionalArgs[$arg->getName()]) {
+                $arDependencies[] = $value;
             }
         }
 

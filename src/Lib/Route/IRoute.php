@@ -11,5 +11,5 @@ interface IRoute
 
     public function getHttpMethod() : string;
 
-    public function runController(RequestInterface $request) : ResponseInterface;
+    public function runController(RequestInterface $request, array $matches = []) : ResponseInterface;
 }

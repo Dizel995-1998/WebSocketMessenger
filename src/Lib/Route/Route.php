@@ -6,6 +6,7 @@ use Exception;
 use InvalidArgumentException;
 use Lib\Container\Container;
 use Lib\Middleware\IMiddleware;
+use Lib\Response\BadRequest;
 use Lib\Response\HttpErrorException;
 use Lib\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -65,13 +66,21 @@ class Route implements IRoute
         $this->controllerAction = $action;
     }
 
+
+    protected function preparePattern(string $patternUrl) : ?string
+    {
+        return preg_replace_callback('~{(?<param_name>\S+)}~', function ($item) {
+            return sprintf('(?<%s>\d+)', $item['param_name']);
+        }, $patternUrl);
+    }
+
     /**
      * Возвращает паттерн роута
      * @return string
      */
     public function getPatternUrl(): string
     {
-        return '~^' . $this->patternUrl . '$~';
+        return '~^' . $this->preparePattern($this->patternUrl) . '$~';
     }
 
     /**
@@ -86,9 +95,10 @@ class Route implements IRoute
     /**
      * Запускает контроллер роута
      * @param RequestInterface $request
+     * @param array $matches
      * @return ResponseInterface
      */
-    public function runController(RequestInterface $request): ResponseInterface
+    public function runController(RequestInterface $request, array $matches = []): ResponseInterface
     {
         if ($this->arMiddlewares) {
             try {
@@ -102,7 +112,7 @@ class Route implements IRoute
         }
 
         try {
-            return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction) : $this->runCallableController($this->controller);
+            return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction, $matches) : $this->runCallableController($this->controller, $matches);
         } catch (HttpErrorException $e) {
             return new JsonResponse($e->getHttpErrorCode(), ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
         } catch (Throwable $e) {
@@ -118,7 +128,7 @@ class Route implements IRoute
      * @return ResponseInterface
      * @throws \ReflectionException
      */
-    private function runStringController(string $controllerName, string $controllerAction) : ResponseInterface
+    private function runStringController(string $controllerName, string $controllerAction, array $matches = []) : ResponseInterface
     {
         if (!class_exists($controllerName)) {
             throw new InvalidArgumentException(sprintf('Controller: %s not found', $controllerName));
@@ -128,7 +138,7 @@ class Route implements IRoute
             throw new InvalidArgumentException(sprintf('Controller "%s" dont have "%s" action', $controllerName, $controllerAction));
         }
 
-        return Container::resolveMethodDependencies(Container::getService($controllerName), $controllerAction);
+        return Container::resolveMethodDependencies(Container::getService($controllerName), $controllerAction, $matches);
     }
 
     /**
