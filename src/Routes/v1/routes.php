@@ -1,6 +1,8 @@
 <?php
 
 use Lib\Route\Route;
+use Middleware\Authorization;
+use Controller\UserController;
 use Controller\AuthController;
 
 return [
@@ -8,9 +10,9 @@ return [
 
     new Route('/user', 'POST', AuthController::class, 'createUser'),
 
-    (new Route('/user/me', 'GET', \Controller\UserController::class, 'me'))
-        ->addMiddleware(\Middleware\Authorization::class),
+    (new Route('/user/me', 'GET', UserController::class, 'me'))
+        ->addMiddleware(Authorization::class),
 
-    (new Route('/user/{id}', 'GET', \Controller\UserController::class, 'profile'))
-        ->addMiddleware(\Middleware\Authorization::class)
+    (new Route('/user/{id}', 'GET', UserController::class, 'profile'))
+        ->addMiddleware(Authorization::class)
 ];
