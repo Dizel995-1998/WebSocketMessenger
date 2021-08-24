@@ -35,7 +35,10 @@ RUN docker-php-ext-install intl opcache mysqli pdo_mysql zip soap sockets exif
 RUN pecl install xdebug \
     && docker-php-ext-enable xdebug \
     && docker-php-ext-install sockets \
-    && docker-php-ext-enable sockets
+    && docker-php-ext-enable sockets \
+    && docker-php-ext-install pcntl \
+    && docker-php-ext-enable pcntl
+
 
 # composer
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
