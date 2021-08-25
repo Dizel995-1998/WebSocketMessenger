@@ -189,7 +189,7 @@ abstract class DataManager
         self::$primaryKeyProperty = '';
 
         $reflectionClass = new ReflectionClass(static::class);
-        $entityProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC);
+        $entityProperties = $reflectionClass->getProperties(ReflectionProperty::IS_PROTECTED);
 
         if (empty($entityProperties)) {
             throw new RuntimeException('Entity does not have any property');
@@ -241,5 +241,14 @@ abstract class DataManager
     public static function isTableExists() : bool
     {
         return (bool) self::getConnection()->query(sprintf("SHOW TABLES LIKE '%s'", static::getTableName()))->fetch();
+    }
+
+    public static function fillRelations(string $relationEntity)
+    {
+        if (!class_exists($relationEntity)) {
+            throw new RuntimeException(sprintf('There is no class %s', $relationEntity));
+        }
+
+
     }
 }

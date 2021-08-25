@@ -44,7 +44,7 @@ class AuthController
             throw new BadRequest('Invalid login or password');
         }
 
-        $jwtToken->setUserId($user->id);
+        $jwtToken->setUserId($user->getId());
 
         return new SuccessResponse(['jwtToken' => (string) $jwtToken]);
     }
@@ -75,11 +75,12 @@ class AuthController
             throw new BadRequest('User already exist');
         }
 
-        $user = new User();
-        $user->name = $request->get('name');
-        $user->login = $request->get('login');
-        $user->passwordHash = $passwordHash->hashPassword($request->get('password'));
-        $user->pictureUrl = $request->get('avatar');
+        $user = (new User())
+            ->setName($request->get('name'))
+            ->setLogin($request->get('login'))
+            ->setPasswordHash($passwordHash->hashPassword($request->get('password')))
+            ->setPictureUrl($request->get('avatar'));
+
         if (!$user->save()) {
             throw new ServerInternalError('Cannot create user');
         }
