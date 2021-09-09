@@ -110,14 +110,14 @@ class QueryBuilderSelector extends QueryBuilder
             throw new InvalidArgumentException('There is no reference to ref.entity, use ref.COLUMN_NAME');
         }
 
-        $this->joinQuery .= sprintf(' %s JOIN %s as %s ON %s.%s = %s.%s ',
+        $this->joinQuery .= sprintf('%s JOIN %s as %s ON %s.%s = %s.%s ',
             $joinType,
-            $this->escapeString($tableName),
-            $this->escapeString($tableAlias),
-            $this->escapeString($this->tableName),
-            $this->escapeString($thisEntity['this_key']),
-            $this->escapeString($tableAlias),
-            $this->escapeString($refEntity['ref_key'])
+            ($tableName),
+            ($tableAlias),
+            ($this->tableName),
+            ($thisEntity['this_key']),
+            ($tableAlias),
+            ($refEntity['ref_key'])
         );
 
         return $this;
