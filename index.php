@@ -24,13 +24,27 @@ ini_set('xdebug.var_display_max_data', 1024);
 
 class MetaDataEntity
 {
+    protected string $className;
+    protected array $relations = [];
+    protected array $mapping = [];
+
+    /**
+     * @param string $className
+     * @param PropertyMap[] $mapping
+     */
+    public function __construct(string $className, array $mapping)
+    {
+        $this->className = $className;
+        $this->mapping = $mapping;
+    }
+
     /**
      * Возвращает название класса сущности
      * @return string
      */
     public function getSourceClassName() : string
     {
-        return User::class;
+        return $this->className;
     }
 
     public function getColumns() : array
@@ -44,37 +58,39 @@ class MetaDataEntity
     }
 
     /**
+     * @param <string, BaseRelation>[] $relations
+     */
+    public function setRelations(array $relations)
+    {
+        $this->relations = $relations;
+    }
+
+    /**
      * @return <string, BaseRelation>[]
      */
     public function getRelations() : array
     {
-        return [
-            'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table')
-        ];
+        return $this->relations;
     }
 
-    /**
-     * @return PropertyMap[]
-     */
     public function getMapping() : array
     {
-        return [
-            new PropertyMap('id', new IntegerColumn('ID')),
-            new PropertyMap('name', new IntegerColumn('NAME'))
-        ];
+        return $this->mapping;
     }
 }
 
 class QueryBuilder
 {
+    protected array $arMockData;
+
+    public function __construct(array $arMockData)
+    {
+        $this->arMockData = $arMockData;
+    }
+
     public function getSomeData() : array
     {
-        return [
-            'ID' => 123,
-            'NAME' => 'John',
-            'LAST_NAME' => 'Franko',
-            'AGE' => 18
-        ];
+        return $this->arMockData;
     }
 }
 
@@ -160,24 +176,35 @@ class LazyCollection implements IteratorAggregate
 
     public function getIterator()
     {
-        /**
-         * TODO сделать запрос к БД и через гидратор наполнить связанную сущность
-         */
-        return new ArrayIterator([
-
+        $arMock = [
             [
-                'file_id' => 123,
-                'path' => '/var/www/html/123.jpg',
-                'mime_type' => 'image/jpeg',
-                'extension' => 'jpeg'
+                'MIME_TYPE' => 'image/jpeg',
+                'PATH' => '/var/www/bitrix/12.jpg',
+                'FILE_ID' => 123,
+                'EXTENSION' => 'jpeg'
             ],
             [
-                'file_id' => 124,
-                'path' => '/var/www/html/124.png',
-                'mime_type' => 'image/png',
-                'extension' => 'png'
+                'MIME_TYPE' => 'image/jpg',
+                'PATH' => '/var/www/bitrix/995.jpg',
+                'FILE_ID' => 124,
+                'EXTENSION' => 'png'
             ]
-        ]);
+        ];
+
+        $pictureMapping = [
+            new PropertyMap('path', new IntegerColumn('PATH')),
+            new PropertyMap('mime_type', new IntegerColumn('MIME_TYPE')),
+            new PropertyMap('file_id', new IntegerColumn('FILE_ID')),
+            new PropertyMap('extension', new IntegerColumn('EXTENSION'))
+        ];
+
+        $arIterable = [];
+
+        foreach ($arMock as $mock) {
+            $arIterable[] = Hydrator::getEntity(new MetaDataEntity(Picture::class, $pictureMapping), new QueryBuilder($mock));
+        }
+
+        return new ArrayIterator($arIterable);
     }
 }
 
@@ -382,8 +409,24 @@ class User
     }
 }
 
+$arMock = [
+    'ID' => 123,
+    'NAME' => 'John',
+    'LAST_NAME' => 'Franko',
+    'AGE' => 18
+];
 
-$res = Hydrator::getEntity(new MetaDataEntity(), new QueryBuilder());
+$userMapping = [
+    new PropertyMap('id', new IntegerColumn('ID')),
+    new PropertyMap('name', new IntegerColumn('NAME'))
+];
+
+$userMetaData = new MetaDataEntity(User::class, $userMapping);
+$userMetaData->setRelations([
+    'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table')
+]);
+
+$res = Hydrator::getEntity($userMetaData, new QueryBuilder($arMock));
 
 var_dump($res);
 
