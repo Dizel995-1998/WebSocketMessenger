@@ -100,17 +100,27 @@ abstract class BaseRelation
     protected string $targetTable;
     protected string $sourceColumn;
     protected string $targetColumn;
+    protected string $targetClassName;
+    // todo скорее всего не нужно
+    protected string $sourceClassName;
 
     public function __construct(
         string $sourceColumn,
         string $sourceTable,
         string $targetColumn,
-        string $targetTable
+        string $targetTable,
+        string $targetClassName
     ) {
         $this->sourceColumn = $sourceColumn;
         $this->sourceTable = $sourceTable;
         $this->targetColumn = $targetColumn;
         $this->targetTable = $targetTable;
+        $this->targetClassName = $targetClassName;
+    }
+
+    public function getTargetClassName() : string
+    {
+        return $this->targetClassName;
     }
 
     public function getSourceTable() : string
@@ -169,13 +179,25 @@ class MetaDataRelation
 
 class LazyCollection implements IteratorAggregate
 {
-//    public function __construct(MetaDataRelation $metaDataRelation)
-//    {
-//
-//    }
+    protected BaseRelation $relation;
+
+    public function __construct(BaseRelation $relation)
+    {
+        $this->relation = $relation;
+    }
 
     public function getIterator()
     {
+        // todo не думаю что запрос должен строится отсюда, должно идти обращение к сервисному слою для работы с БД для построения JOIN запроса
+        $sql = sprintf('SELECT * FROM %s JOIN %s ON %s = %s',
+            $this->relation->getSourceTable(),
+            $this->relation->getTargetTable(),
+            $this->relation->getSourceColumn(),
+            $this->relation->getTargetColumn()
+        );
+
+
+        // Данные полученные якобы от БД
         $arMock = [
             [
                 'MIME_TYPE' => 'image/jpeg',
@@ -191,6 +213,7 @@ class LazyCollection implements IteratorAggregate
             ]
         ];
 
+        // Структура которую мы получили из ридера сущностей
         $pictureMapping = [
             new PropertyMap('path', new IntegerColumn('PATH')),
             new PropertyMap('mime_type', new IntegerColumn('MIME_TYPE')),
@@ -201,7 +224,7 @@ class LazyCollection implements IteratorAggregate
         $arIterable = [];
 
         foreach ($arMock as $mock) {
-            $arIterable[] = Hydrator::getEntity(new MetaDataEntity(Picture::class, $pictureMapping), new QueryBuilder($mock));
+            $arIterable[] = Hydrator::getEntity(new MetaDataEntity($this->relation->getTargetClassName(), $pictureMapping), new QueryBuilder($mock));
         }
 
         return new ArrayIterator($arIterable);
@@ -226,7 +249,7 @@ class Hydrator
             foreach ($associations as $propertyName => $association) {
                 $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
-                $propertyReflector->setValue($ormEntity, new LazyCollection());
+                $propertyReflector->setValue($ormEntity, new LazyCollection($association));
             }
         }
 
@@ -388,7 +411,7 @@ class User
     protected int $id = 0;
     protected $pictures;
 
-    public function __constructor()
+    public function __construct()
     {
         $z = 0;
     }
@@ -423,7 +446,7 @@ $userMapping = [
 
 $userMetaData = new MetaDataEntity(User::class, $userMapping);
 $userMetaData->setRelations([
-    'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table')
+    'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table', Picture::class)
 ]);
 
 $res = Hydrator::getEntity($userMetaData, new QueryBuilder($arMock));
