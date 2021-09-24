@@ -19,19 +19,11 @@ class LazyCollection implements IteratorAggregate
 
     public function getIterator()
     {
-        // todo не думаю что запрос должен строится отсюда, должно идти обращение к сервисному слою для работы с БД для построения JOIN запроса
-        $sql = sprintf('SELECT * FROM %s JOIN %s ON %s = %s',
-            $this->relation->getSourceTable(),
-            $this->relation->getTargetTable(),
-            $this->relation->getSourceColumn(),
-            $this->relation->getTargetColumn()
-        );
-
         $dataCollection = (new QueryBuilder())->exec();
         $arIterable = [];
 
         foreach ($dataCollection as $item) {
-            $arIterable[] = Hydrator::getEntity(new MetaDataEntity($this->relation->getTargetClassName()), $item);
+            $arIterable[] = Hydrator::getEntity(new MetaDataEntity($this->relation->getTargetColumn()->getEntityClassName()), $item);
         }
 
         return new \ArrayIterator($arIterable);
