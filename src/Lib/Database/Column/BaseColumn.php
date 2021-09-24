@@ -10,26 +10,59 @@ abstract class BaseColumn
     protected string $columnName;
 
     /**
-     * @var mixed
+     * @var bool
      */
-    protected $columnValue;
+    protected bool $isPrimaryKey = false;
 
     /**
      * @var bool
      */
-    protected bool $isPrimaryKey;
+    protected bool $isNullable;
 
     /**
-     * TODO правильно ли в колонке хранить значение, ведь значение есть в колонки у строки, а не у абстрактной колонки
-     * @param string $columnName
-     * @param null $columnValue
-     * @param bool $isPrimaryKey
+     * @var string
      */
-    public function __construct(string $columnName, $columnValue = null, bool $isPrimaryKey = false)
-    {
+    protected string $tableName;
+
+    /**
+     * @var string
+     */
+    protected string $entityClassName;
+
+    /**
+     * @var mixed
+     */
+    protected $defaultValue;
+
+    /**
+     * @param string $columnName
+     * @param string $tableName
+     * @param string $entityClassName
+     * @param bool $isNullable
+     * @param null $defaultValue
+     */
+    public function __construct(
+        string $columnName,
+        string $tableName,
+        string $entityClassName,
+        bool $isNullable = true,
+        $defaultValue = null
+    ) {
+        $this->entityClassName = $entityClassName;
         $this->columnName = $columnName;
-        $this->columnValue = $columnValue;
-        $this->isPrimaryKey = $isPrimaryKey;
+        $this->isNullable = $isNullable;
+        $this->tableName = $tableName;
+        $this->defaultValue = $defaultValue;
+    }
+
+    public function getEntityClassName() : string
+    {
+        return $this->entityClassName;
+    }
+
+    public function getTableName() : string
+    {
+        return $this->tableName;
     }
 
     public function isPrimaryKey(): bool
@@ -37,27 +70,14 @@ abstract class BaseColumn
         return $this->isPrimaryKey;
     }
 
+    public function isNullable() : bool
+    {
+        return $this->isNullable;
+    }
+
     public function getName(): string
     {
         return $this->columnName;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getValue()
-    {
-        return $this->columnValue;
-    }
-
-    /**
-     * @param mixed $value
-     * @return $this
-     */
-    public function setValue($value): self
-    {
-        $this->columnValue = $value;
-        return $this;
     }
 
     abstract public function getType(): string;
