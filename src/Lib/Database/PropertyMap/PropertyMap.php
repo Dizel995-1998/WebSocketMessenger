@@ -38,9 +38,9 @@ class PropertyMap
         return isset($this->relation);
     }
 
-    public function getPropertyName(): string
+    public function getProperty(): Property
     {
-        return $this->property->getName();
+        return $this->property;
     }
 
     public function getColumn(): BaseColumn
