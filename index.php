@@ -25,57 +25,48 @@ ini_set('xdebug.var_display_max_data', 1024);
 class MetaDataEntity
 {
     protected string $className;
-    protected array $relations = [];
-    protected array $mapping = [];
+    protected EntityReader $reader;
 
     /**
      * @param string $className
-     * @param PropertyMap[] $mapping
+     * @param EntityReader $reader
      */
-    public function __construct(string $className, array $mapping)
+    public function __construct(string $className, EntityReader $reader)
     {
         $this->className = $className;
-        $this->mapping = $mapping;
+        $this->reader = $reader;
     }
 
     /**
      * Возвращает название класса сущности
      * @return string
      */
-    public function getSourceClassName() : string
+    public function getSourceClassName(): string
     {
         return $this->className;
     }
 
-    public function getColumns() : array
+    public function getColumns(): array
     {
 
     }
 
-    public function getProperties() : array
+    public function getProperties(): array
     {
 
-    }
-
-    /**
-     * @param <string, BaseRelation>[] $relations
-     */
-    public function setRelations(array $relations)
-    {
-        $this->relations = $relations;
     }
 
     /**
      * @return <string, BaseRelation>[]
      */
-    public function getRelations() : array
+    public function getRelations(): array
     {
-        return $this->relations;
+        return $this->reader->getEntityRelations();
     }
 
-    public function getMapping() : array
+    public function getMapping(): array
     {
-        return $this->mapping;
+        return $this->reader->getEntityMapping();
     }
 }
 
@@ -88,7 +79,7 @@ class QueryBuilder
         $this->arMockData = $arMockData;
     }
 
-    public function getSomeData() : array
+    public function getSomeData(): array
     {
         return $this->arMockData;
     }
@@ -104,13 +95,22 @@ abstract class BaseRelation
     // todo скорее всего не нужно
     protected string $sourceClassName;
 
+    /**
+     * TODO можно заменить строковые значениям - двумя обьектами колонками, и в обьект колонки ввести принадлежность таблице
+     * @param string $sourceColumn
+     * @param string $sourceTable
+     * @param string $targetColumn
+     * @param string $targetTable
+     * @param string $targetClassName
+     */
     public function __construct(
         string $sourceColumn,
         string $sourceTable,
         string $targetColumn,
         string $targetTable,
         string $targetClassName
-    ) {
+    )
+    {
         $this->sourceColumn = $sourceColumn;
         $this->sourceTable = $sourceTable;
         $this->targetColumn = $targetColumn;
@@ -118,27 +118,27 @@ abstract class BaseRelation
         $this->targetClassName = $targetClassName;
     }
 
-    public function getTargetClassName() : string
+    public function getTargetClassName(): string
     {
         return $this->targetClassName;
     }
 
-    public function getSourceTable() : string
+    public function getSourceTable(): string
     {
         return $this->sourceTable;
     }
 
-    public function getTargetTable() : string
+    public function getTargetTable(): string
     {
         return $this->targetTable;
     }
 
-    public function getSourceColumn() : string
+    public function getSourceColumn(): string
     {
         return $this->sourceColumn;
     }
 
-    public function getTargetColumn() : string
+    public function getTargetColumn(): string
     {
         return $this->targetColumn;
     }
@@ -156,24 +156,46 @@ class OneToMany extends BaseRelation
 
 class MetaDataRelation
 {
-    public function getSourceTable() : string
+    public function getSourceTable(): string
     {
         return 'pictures';
     }
 
-    public function getJoinType() : string
+    public function getJoinType(): string
     {
         return 'INNER';
     }
 
-    public function getSourceColumn() : string
+    public function getSourceColumn(): string
     {
         return 'user_id';
     }
 
-    public function getTargetColumn() : string
+    public function getTargetColumn(): string
     {
         return 'id';
+    }
+}
+
+class Property
+{
+    protected string $name;
+    protected ?string $type = null;
+
+    public function __construct(string $name, ?string $type = null)
+    {
+        $this->name = $name;
+        $this->type = $type;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
     }
 }
 
@@ -233,7 +255,7 @@ class LazyCollection implements IteratorAggregate
 
 class Hydrator
 {
-    public static function getEntity(MetaDataEntity $metaData, QueryBuilder $queryBuilder) : object
+    public static function getEntity(MetaDataEntity $metaData, QueryBuilder $queryBuilder): object
     {
         $reflectionClass = new ReflectionClass($metaData->getSourceClassName());
         $ormEntity = $reflectionClass->newInstanceWithoutConstructor();
@@ -262,15 +284,15 @@ class Hydrator
  */
 class PropertyMap
 {
-    protected string $propertyName;
+    protected Property $property;
 
     protected ?BaseColumn $column = null;
 
     protected ?BaseRelation $relation = null;
 
-    public function __construct(string $propertyName, BaseColumn $column = null)
+    public function __construct(Property $property, BaseColumn $column = null)
     {
-        $this->propertyName = $propertyName;
+        $this->property = $property;
         $this->column = $column;
     }
 
@@ -279,22 +301,22 @@ class PropertyMap
         $this->relation = $relation;
     }
 
-    public function getRelation() : BaseRelation
+    public function getRelation(): BaseRelation
     {
         return $this->relation;
     }
 
-    public function isRelation() : bool
+    public function isRelation(): bool
     {
         return isset($this->relation);
     }
 
-    public function getPropertyName() : string
+    public function getPropertyName(): string
     {
-        return $this->propertyName;
+        return $this->property->getName();
     }
 
-    public function getColumn() : BaseColumn
+    public function getColumn(): BaseColumn
     {
         return $this->column;
     }
@@ -330,12 +352,12 @@ abstract class BaseColumn
         $this->isPrimaryKey = $isPrimaryKey;
     }
 
-    public function isPrimaryKey() : bool
+    public function isPrimaryKey(): bool
     {
         return $this->isPrimaryKey;
     }
 
-    public function getName() : string
+    public function getName(): string
     {
         return $this->columnName;
     }
@@ -345,20 +367,20 @@ abstract class BaseColumn
      */
     public function getValue()
     {
-       return $this->columnValue;
+        return $this->columnValue;
     }
 
     /**
      * @param mixed $value
      * @return $this
      */
-    public function setValue($value) : self
+    public function setValue($value): self
     {
         $this->columnValue = $value;
         return $this;
     }
 
-    abstract public function getType() : string;
+    abstract public function getType(): string;
 }
 
 class IntegerColumn extends BaseColumn
@@ -384,12 +406,12 @@ class Picture
     protected $mime_type;
     protected $extension;
 
-    public function getPath() : string
+    public function getPath(): string
     {
         return $this->path;
     }
 
-    public function getMimeType() : string
+    public function getMimeType(): string
     {
         return $this->mime_type;
     }
@@ -399,7 +421,7 @@ class Picture
         return $this->file_id;
     }
 
-    public function getExtension() : string
+    public function getExtension(): string
     {
         return $this->extension;
     }
@@ -416,12 +438,12 @@ class User
         $z = 0;
     }
 
-    public function getName() : string
+    public function getName(): string
     {
         return $this->name;
     }
 
-    public function getId() : int
+    public function getId(): int
     {
         return $this->id;
     }
@@ -432,6 +454,41 @@ class User
     }
 }
 
+class EntityReader
+{
+    protected array $entityMapping = [];
+
+    protected array $relations = [];
+
+    /**
+     * TODO тестовый метод, дропнуть
+     */
+    public function setEntityMapping(array $mapping): self
+    {
+        $this->entityMapping = $mapping;
+        return $this;
+    }
+
+    /**
+     * TODO тестовый метод, удалить
+     */
+    public function setEntityRelations(array $relations): self
+    {
+        $this->relations = $relations;
+        return $this;
+    }
+
+    public function getEntityMapping(): array
+    {
+        return $this->entityMapping;
+    }
+
+    public function getEntityRelations(): array
+    {
+        return $this->relations;
+    }
+}
+
 $arMock = [
     'ID' => 123,
     'NAME' => 'John',
@@ -439,15 +496,16 @@ $arMock = [
     'AGE' => 18
 ];
 
-$userMapping = [
-    new PropertyMap('id', new IntegerColumn('ID')),
-    new PropertyMap('name', new IntegerColumn('NAME'))
-];
+$userReader = (new EntityReader())
+    ->setEntityMapping([
+        new PropertyMap(new Property('id'), new IntegerColumn('ID')),
+        new PropertyMap(new Property('name'), new IntegerColumn('NAME'))
+    ])
+    ->setEntityRelations([
+        'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table', Picture::class)
+    ]);
 
-$userMetaData = new MetaDataEntity(User::class, $userMapping);
-$userMetaData->setRelations([
-    'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table', Picture::class)
-]);
+$userMetaData = new MetaDataEntity(User::class, $userReader);
 
 $res = Hydrator::getEntity($userMetaData, new QueryBuilder($arMock));
 
