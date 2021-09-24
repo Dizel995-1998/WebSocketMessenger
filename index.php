@@ -43,25 +43,24 @@ class MetaDataEntity
 
     }
 
+    /**
+     * @return <string, BaseRelation>[]
+     */
     public function getRelations() : array
     {
         return [
-            [
-                /** TODO Реализовать в виде коллекции обектов типа OneToMany, OneToOne, ManyToMany */
-                /** One To Many */
-                'refEntity' => Picture::class,
-                'refProperty' => 'user_id',
-                'sourceProperty' => 'id',
-                'propertySourceCall' => 'pictures'
-            ]
+            'pictures' => new OneToMany('id', 'user_table', 'user_id', 'pictures_table')
         ];
     }
 
+    /**
+     * @return PropertyMap[]
+     */
     public function getMapping() : array
     {
         return [
-            'id' => 'ID',
-            'name' => 'NAME'
+            new PropertyMap('id', new IntegerColumn('ID')),
+            new PropertyMap('name', new IntegerColumn('NAME'))
         ];
     }
 }
@@ -77,6 +76,56 @@ class QueryBuilder
             'AGE' => 18
         ];
     }
+}
+
+abstract class BaseRelation
+{
+    protected string $sourceTable;
+    protected string $targetTable;
+    protected string $sourceColumn;
+    protected string $targetColumn;
+
+    public function __construct(
+        string $sourceColumn,
+        string $sourceTable,
+        string $targetColumn,
+        string $targetTable
+    ) {
+        $this->sourceColumn = $sourceColumn;
+        $this->sourceTable = $sourceTable;
+        $this->targetColumn = $targetColumn;
+        $this->targetTable = $targetTable;
+    }
+
+    public function getSourceTable() : string
+    {
+        return $this->sourceTable;
+    }
+
+    public function getTargetTable() : string
+    {
+        return $this->targetTable;
+    }
+
+    public function getSourceColumn() : string
+    {
+        return $this->sourceColumn;
+    }
+
+    public function getTargetColumn() : string
+    {
+        return $this->targetColumn;
+    }
+}
+
+class OneToOne extends BaseRelation
+{
+
+}
+
+class OneToMany extends BaseRelation
+{
+
 }
 
 class MetaDataRelation
@@ -111,7 +160,11 @@ class LazyCollection implements IteratorAggregate
 
     public function getIterator()
     {
+        /**
+         * TODO сделать запрос к БД и через гидратор наполнить связанную сущность
+         */
         return new ArrayIterator([
+
             [
                 'file_id' => 123,
                 'path' => '/var/www/html/123.jpg',
@@ -136,15 +189,15 @@ class Hydrator
         $ormEntity = $reflectionClass->newInstanceWithoutConstructor();
         $dbData = $queryBuilder->getSomeData();
 
-        foreach ($metaData->getMapping() as $propertyName => $columnName) {
-            $propertyReflector = $reflectionClass->getProperty($propertyName);
+        foreach ($metaData->getMapping() as $propertyMap) {
+            $propertyReflector = $reflectionClass->getProperty($propertyMap->getPropertyName());
             $propertyReflector->setAccessible(true);
-            $propertyReflector->setValue($ormEntity, $dbData[$columnName]);
+            $propertyReflector->setValue($ormEntity, $dbData[$propertyMap->getColumn()->getName()]);
         }
 
         if ($associations = $metaData->getRelations()) {
-            foreach ($associations as $association) {
-                $propertyReflector = $reflectionClass->getProperty($association['propertySourceCall']);
+            foreach ($associations as $propertyName => $association) {
+                $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
                 $propertyReflector->setValue($ormEntity, new LazyCollection());
             }
@@ -154,9 +207,152 @@ class Hydrator
     }
 }
 
+/**
+ * TODO может стоить реализовать отдельный класс для свойств? class Property
+ */
+class PropertyMap
+{
+    protected string $propertyName;
+
+    protected ?BaseColumn $column = null;
+
+    protected ?BaseRelation $relation = null;
+
+    public function __construct(string $propertyName, BaseColumn $column = null)
+    {
+        $this->propertyName = $propertyName;
+        $this->column = $column;
+    }
+
+    public function setRelation(BaseRelation $relation)
+    {
+        $this->relation = $relation;
+    }
+
+    public function getRelation() : BaseRelation
+    {
+        return $this->relation;
+    }
+
+    public function isRelation() : bool
+    {
+        return isset($this->relation);
+    }
+
+    public function getPropertyName() : string
+    {
+        return $this->propertyName;
+    }
+
+    public function getColumn() : BaseColumn
+    {
+        return $this->column;
+    }
+}
+
+abstract class BaseColumn
+{
+    /**
+     * @var string
+     */
+    protected string $columnName;
+
+    /**
+     * @var mixed
+     */
+    protected $columnValue;
+
+    /**
+     * @var bool
+     */
+    protected bool $isPrimaryKey;
+
+    /**
+     * TODO правильно ли в колонке хранить значение, ведь значение есть в колонки у строки, а не у абстрактной колонки
+     * @param string $columnName
+     * @param null $columnValue
+     * @param bool $isPrimaryKey
+     */
+    public function __construct(string $columnName, $columnValue = null, bool $isPrimaryKey = false)
+    {
+        $this->columnName = $columnName;
+        $this->columnValue = $columnValue;
+        $this->isPrimaryKey = $isPrimaryKey;
+    }
+
+    public function isPrimaryKey() : bool
+    {
+        return $this->isPrimaryKey;
+    }
+
+    public function getName() : string
+    {
+        return $this->columnName;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getValue()
+    {
+       return $this->columnValue;
+    }
+
+    /**
+     * @param mixed $value
+     * @return $this
+     */
+    public function setValue($value) : self
+    {
+        $this->columnValue = $value;
+        return $this;
+    }
+
+    abstract public function getType() : string;
+}
+
+class IntegerColumn extends BaseColumn
+{
+    public function getType(): string
+    {
+        return 'integer';
+    }
+}
+
+class StringColumn extends BaseColumn
+{
+    public function getType(): string
+    {
+        return 'string';
+    }
+}
+
 class Picture
 {
+    protected $file_id;
+    protected $path;
+    protected $mime_type;
+    protected $extension;
 
+    public function getPath() : string
+    {
+        return $this->path;
+    }
+
+    public function getMimeType() : string
+    {
+        return $this->mime_type;
+    }
+
+    public function getFileId()
+    {
+        return $this->file_id;
+    }
+
+    public function getExtension() : string
+    {
+        return $this->extension;
+    }
 }
 
 class User
@@ -188,6 +384,8 @@ class User
 
 
 $res = Hydrator::getEntity(new MetaDataEntity(), new QueryBuilder());
+
+var_dump($res);
 
 foreach ($res->getPictures() as $picture) {
     var_dump($picture);
