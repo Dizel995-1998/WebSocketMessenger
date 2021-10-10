@@ -56,12 +56,6 @@ class NestedSets
     protected function updateParentsSection(int $leftMargin) : void
     {
         foreach ($this->sections as $section) {
-            // fixme насколько поминаю уже не нужна
-            if ($section->getLevel() == self::ROOT_LEVEL) {
-                $section->setRightMargin($section->getRightMargin() + 2);
-                continue;
-            }
-
             if ($section->getLeftMargin() < $leftMargin && $section->getRightMargin() >= $leftMargin) {
                 $section->setRightMargin($section->getRightMargin() + 2);
             }
