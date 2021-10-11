@@ -136,7 +136,10 @@ class ReflectionReader implements IReader
 
     public static function getTableNameByEntity(string $entityClassName): ?string
     {
-        // TODO: Implement getTableNameByEntity() method.
+        $phpDoc = (new \ReflectionClass($entityClassName))->getDocComment();
+
+
+
     }
 
     public static function getEntityClassNameByTable(string $tableName): ?string

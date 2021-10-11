@@ -29,6 +29,26 @@ class QueryBuilder
     }
 
     /**
+     * @param string[] $fields
+     * @return self
+     */
+    public function select(array $fields) : self
+    {
+
+        return $this;
+    }
+
+    /**
+     * @param array-key[] $filter
+     * @return $this
+     */
+    public function filter(array $filter) : self
+    {
+
+        return $this;
+    }
+
+    /**
      * TODO временно возвращает массив, будет возвращать обьект выборки
      * @return array
      */

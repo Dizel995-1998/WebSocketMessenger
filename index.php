@@ -4,8 +4,7 @@ use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\MetaData\MetaDataEntity;
 use Lib\Database\Query\QueryBuilder;
 use \Lib\Database\Relations\OneToMany;
-use Lib\Database\Column\IntegerColumn;
-use Lib\Database\Column\StringColumn;
+use Lib\Database\Column AS ORM;
 
 require_once 'vendor/autoload.php';
 
@@ -74,28 +73,31 @@ class Picture
     }
 }
 
+/**
+ * @ORM\Table({"name":"Users"})
+ */
 class User
 {
     /**
-     * @StringColumn({"name":"NAME"})
+     * @ORM\StringColumn({"name":"NAME"})
      * @var string
      */
     protected string $name;
 
     /**
-     * @StringColumn({"name":"LAST_NAME"})
+     * @ORM\StringColumn({"name":"LAST_NAME"})
      * @var string
      */
     protected string $last_name;
 
     /**
-     * @IntegerColumn({"name":"ID"})
+     * @ORM\IntegerColumn({"name":"ID"})
      * @var int|null
      */
     protected ?int $id;
 
     /**
-     * @OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
+     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
      * @var
      */
     protected $pictures;
@@ -107,15 +109,19 @@ class User
 }
 
 
-$arMockUser = [
-    'NAME' => 'John',
-    'LAST_NAME' => 'FRank',
-    'ID' => 123
-];
+//$arMockUser = [
+//    'NAME' => 'John',
+//    'LAST_NAME' => 'FRank',
+//    'ID' => 123
+//];
+//
+//$user = Hydrator::getEntity(new MetaDataEntity(User::class), (new QueryBuilder($arMockUser))->exec());
+//var_dump($user);
+//
+//foreach ($user->getPictures() as $picture) {
+//    var_dump($picture);
+//}
 
-$res = Hydrator::getEntity(new MetaDataEntity(User::class), (new QueryBuilder($arMockUser))->exec());
-var_dump($res);
-
-foreach ($res->getPictures() as $picture) {
-    var_dump($picture);
-}
+$reflectionReader = new \Lib\Database\Reader\ReflectionReader(User::class);
+$r = $reflectionReader->getColumnNameByProperty('id');
+var_dump($r);
