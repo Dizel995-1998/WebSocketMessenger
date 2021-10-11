@@ -12,6 +12,8 @@ services:
     ports:
       - 80:80
   php-fpm:
+    ports:
+      - 45500:45500
     build:
       context: docker/php
       args:

@@ -4,7 +4,9 @@
         "ext-pdo": "*",
         "rakit/validation": "^1.4",
       "ext-json": "*",
-      "ext-mbstring": "*"
+      "ext-mbstring": "*",
+        "symfony/yaml": "^5.3",
+        "symfony/console": "^5.3"
     },
     "autoload": {
         "psr-4": {

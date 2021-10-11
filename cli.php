@@ -8,15 +8,8 @@ if (!$_SERVER['DOCUMENT_ROOT']) {
 
 require_once 'vendor/autoload.php';
 
-$commandRunner = new CommandRunner(new \Lib\Command\Input($argv), new \Lib\Command\Output());
+use Symfony\Component\Console\Application;
 
-foreach (scandir($_SERVER['DOCUMENT_ROOT'] . '/src/Command') as $file) {
-    if ($file == '.' || $file == '..') {
-        continue;
-    }
-
-    $commandClassName = '\Command\\' . str_replace('.php', '', $file);
-    $commandRunner->addCommand(new $commandClassName);
-}
-
-echo $commandRunner->run();
+$app = new Application();
+$app->add(new \Command\TestCommand());
+$app->run();
