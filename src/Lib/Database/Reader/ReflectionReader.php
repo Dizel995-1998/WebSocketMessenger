@@ -2,10 +2,7 @@
 
 namespace Lib\Database\Reader;
 
-use Lib\Database\Column\IntegerColumn;
-use Lib\Database\Column\StringColumn;
 use ReflectionProperty;
-
 
 class ReflectionReader implements IReader
 {
@@ -13,120 +10,108 @@ class ReflectionReader implements IReader
 
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
 
-    const ALLOW_COLUMN_TYPES = [
-        IntegerColumn::class,
-        StringColumn::class
-    ];
+    const DEFAULT_PRIMARY_KEY_COLUMN = 'id';
 
     protected string $entityClassName;
 
-    /**
-     * @var <string, ReflectionProperty>[]
-     */
+    protected string $tableName;
+
+    protected string $primaryKeyColumn;
+
     protected array $properties = [];
 
     public function __construct(string $entityClassName)
     {
         $this->entityClassName = $entityClassName;
+        $this->parse();
     }
 
-    /**
-     * @throws \ReflectionException
-     */
-    public function getProperties(): array
+    protected function parse() : void
     {
-        if ($this->properties) {
-            return array_keys($this->properties);
-        }
-
         $reflectionClass = new \ReflectionClass($this->entityClassName);
 
-        foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
-            $this->properties[$reflectionProperty->getName()] = $reflectionProperty;
+        if (!$this->tableName = $this->extractTableNameFromDoc((string) $reflectionClass->getDocComment())) {
+            throw new \InvalidArgumentException(sprintf('Entity "%s" does not table name in php doc', $this->entityClassName));
         }
 
-        return array_keys($this->properties);
+        foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
+            if (!$this->isValidOrmDoc((string) $reflectionProperty->getDocComment())) {
+                continue;
+            }
+
+            $this->properties[$reflectionProperty->getName()] = $this->getColumnName($reflectionProperty->getDocComment());
+        }
+
+        $this->primaryKeyColumn  = $this->primaryKeyColumn ?? self::DEFAULT_PRIMARY_KEY_COLUMN;
+    }
+
+    protected function extractTableNameFromDoc(string $phpDoc) : ?string
+    {
+        return $this->getColumnName($phpDoc) ?: null;
+    }
+
+    protected function getColumnName(string $phpDoc, ?string $defaultColumn = null) : string
+    {
+        $regexPattern = '~ORM\\S+(?<json>({(.*)}))~';
+
+        if (!preg_match($regexPattern, $phpDoc, $matches)) {
+            throw new \InvalidArgumentException('Column was dont found in phpDoc');
+        }
+
+        if (!$jsonDecode = json_decode($matches['json'], true)) {
+            throw new \InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
+        }
+
+        if (!isset($jsonDecode['NAME']) && !isset($jsonDecode['name']) && !$defaultColumn) {
+            throw new \InvalidArgumentException('Cannot find name column');
+        }
+
+        return $jsonDecode['name'] ?: $jsonDecode['NAME'] ?: $defaultColumn;
+    }
+
+    protected function isPrimaryKey() : bool
+    {
+
+    }
+
+    protected function isRelation() : bool
+    {
+
+    }
+
+    protected function isValidOrmDoc(string $phpDoc) : bool
+    {
+        return str_contains($phpDoc, self::DOC_COMMENT_PREFIX);
+    }
+
+    public function getPrimaryKey(): ?string
+    {
+        return $this->primaryKeyColumn;
+    }
+
+    public function getEntityName(): string
+    {
+        return $this->entityClassName;
+    }
+
+    public function getTableName(): string
+    {
+        return $this->tableName;
+    }
+
+    public function getProperties(): array
+    {
+        return $this->properties;
     }
 
     public function getColumns(): array
     {
-        $res = [];
-        $this->getProperties();
-
-        foreach ($this->properties as $propertyName => $reflectionProperty) {
-            if ($column = $this->getColumnNameByProperty($propertyName)) {
-                $res[] = $column;
-            }
-        }
-
-        return $res;
-    }
-
-    /**
-     * TODO стоит вынести в глобальные функции
-     * @param string $classNameWithNamespace
-     * @return string|null
-     */
-    protected function getNamespaceByClassName(string $classNameWithNamespace) : ?string
-    {
-        if (preg_match(sprintf('~(?<namespace>\S+\\)~'), $classNameWithNamespace, $matches)) {
-            return $matches['namespace'];
-        }
-
-        return null;
-    }
-
-    protected function getClassNameWithoutNamespace(string $classNameWithNamespace) : string
-    {
-        $path = explode('\\', $classNameWithNamespace);
-        return array_pop($path);
+        // TODO: Implement getColumns() method.
     }
 
     public function getColumnNameByProperty(string $propertyName): ?string
     {
-        $this->getProperties();
-
-        /*** @var ReflectionProperty */
-        if (!isset($this->properties[$propertyName])) {
-            return null;
-        }
-
-        $phpDoc = $this->properties[$propertyName]->getDocComment();
-        $arDocComment = explode(PHP_EOL, $phpDoc);
-
-        foreach ($arDocComment as $rowDocComment) {
-            $allowedColumnsTypesWithoutNamespaces = array_map(function ($item) {
-                return $this->getClassNameWithoutNamespace($item);
-            }, self::ALLOW_COLUMN_TYPES);
-
-            $regexPattern = sprintf('~@%s\\\(?<column_type>%s)\((?<json_parameters>(.+))\)~', self::DOC_COMMENT_PREFIX, implode('|', $allowedColumnsTypesWithoutNamespaces));
-
-            if (!preg_match($regexPattern, $rowDocComment, $matches)) {
-                continue;
-            }
-
-            if (!$arJson = json_decode($matches['json_parameters'], true)) {
-                $error = sprintf('Error during parsing php doc of %s entity, property %s, json error: %s',
-                    $this->entityClassName,
-                    $propertyName,
-                    json_last_error_msg()
-                );
-
-                throw new \RuntimeException($error);
-            }
-
-            // todo нужна нормальная валидация
-            if (!isset($arJson['name'])) {
-                throw new \RuntimeException(sprintf('Missing required key name, in property: %s, entity: %s',
-                    $propertyName,
-                    $this->entityClassName
-                ));
-            }
-
-            return $arJson['name'];
-        }
-
-        return null;
+        // TODO: Implement getColumnNameByProperty() method.
     }
 
     public function getPropertyNameByColumn(string $columnName): ?string
@@ -136,14 +121,16 @@ class ReflectionReader implements IReader
 
     public static function getTableNameByEntity(string $entityClassName): ?string
     {
-        $phpDoc = (new \ReflectionClass($entityClassName))->getDocComment();
-
-
-
+        // TODO: Implement getTableNameByEntity() method.
     }
 
     public static function getEntityClassNameByTable(string $tableName): ?string
     {
         // TODO: Implement getEntityClassNameByTable() method.
+    }
+
+    public function getRelations(): array
+    {
+        return [];
     }
 }
