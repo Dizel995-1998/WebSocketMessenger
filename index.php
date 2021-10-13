@@ -1,10 +1,13 @@
 <?php
 
+use GuzzleHttp\Psr7\Request;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\MetaData\MetaDataEntity;
 use Lib\Database\Query\QueryBuilder;
+use Lib\Database\Reader\ArrayReader;
 use \Lib\Database\Relations\OneToMany;
 use Lib\Database\Column AS ORM;
+use Lib\Database\Relations\OneToOne;
 
 require_once 'vendor/autoload.php';
 
@@ -109,19 +112,42 @@ class User
 }
 
 
-//$arMockUser = [
-//    'NAME' => 'John',
-//    'LAST_NAME' => 'FRank',
-//    'ID' => 123
-//];
-//
-//$user = Hydrator::getEntity(new MetaDataEntity(User::class), (new QueryBuilder($arMockUser))->exec());
+//$user = Hydrator::getEntity(new MetaDataEntity(new ArrayReader($arMockUser)), (new QueryBuilder($arMockUser))->exec());
 //var_dump($user);
 //
 //foreach ($user->getPictures() as $picture) {
 //    var_dump($picture);
 //}
 
-$reflectionReader = new \Lib\Database\Reader\ReflectionReader(User::class);
-$r = $reflectionReader->getColumnNameByProperty('id');
-var_dump($r);
+$mockData = [
+    'mapping' => [
+        'id' => 'ID',
+        'name' => 'NAME',
+        'last_name' => 'LAST_NAME'
+    ],
+    'associations' => [
+        'pictures' => new OneToOne('picture', 'users', 'id', 'pictures', User::class, Picture::class)
+    ],
+    'entity_name' => User::class,
+    'table_name' => 'users'
+];
+
+$dbMock = [
+    'NAME' => 'John',
+    'LAST_NAME' => 'FRank',
+    'ID' => 123
+];
+
+/**
+ * Необходимо написать сущность которая будет декомпозировать работа QueryBuilder'a и Hydrator'a
+ * Некий EntityManager через который можно получить загидрированные объекты и сохранить их в БД
+ */
+
+$dbData = (new QueryBuilder())->select(['*'])->from('users')->where(['ID' => 1])->exec();
+
+$obj = Hydrator::getEntity(new ArrayReader($mockData), $dbData);
+var_dump($obj);
+
+//foreach ($obj->getPictures() as $picture) {
+//    var_dump($picture);
+//}
