@@ -2,30 +2,17 @@
 
 namespace Lib\Database\Query;
 
+use PDO;
+
 class QueryBuilder
 {
-    protected array $arMock = [];
+    protected string $sql = '';
 
-    public function __construct(array $arMock = [])
+    /**
+     * Прокинуть тип COnnection
+     */
+    public function __construct()
     {
-        if (!$arMock) {
-            $arMock = [
-                [
-                    'MIME_TYPE' => 'image/jpeg',
-                    'PATH' => '/var/www/bitrix/12.jpg',
-                    'FILE_ID' => 123,
-                    'EXTENSION' => 'jpeg'
-                ],
-                [
-                    'MIME_TYPE' => 'image/jpg',
-                    'PATH' => '/var/www/bitrix/995.jpg',
-                    'FILE_ID' => 124,
-                    'EXTENSION' => 'png'
-                ]
-            ];
-        }
-
-        $this->arMock = $arMock;
     }
 
     /**
@@ -34,7 +21,15 @@ class QueryBuilder
      */
     public function select(array $fields) : self
     {
+        // fixme: проверка массива на не ассоциативность
+        // fixme: экранирование полей
+        $this->sql .= sprintf('SELECT %s ', implode(',', $fields));
+        return $this;
+    }
 
+    public function from(string $tableName) : self
+    {
+        $this->sql .= sprintf('FROM %s ', $tableName);
         return $this;
     }
 
@@ -42,9 +37,17 @@ class QueryBuilder
      * @param array-key[] $filter
      * @return $this
      */
-    public function filter(array $filter) : self
+    public function where(array $filter) : self
     {
+        // fixme: проверка массива на ассоциативность
+        // fixme: экранирование полей
+        $preparedExpression = '';
 
+        foreach ($filter as $column => $value) {
+            $preparedExpression .= $column . (is_array($value) ? ' IN ' : ' = ') . "('$value')";
+        }
+
+        $this->sql .= 'WHERE ' . $preparedExpression;
         return $this;
     }
 
@@ -54,7 +57,7 @@ class QueryBuilder
      */
     public function exec(): array
     {
-        // Данные полученные якобы от БД
-        return $this->arMock;
+        $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
+        return $db->query($this->sql)->fetch(PDO::FETCH_ASSOC);
     }
 }
