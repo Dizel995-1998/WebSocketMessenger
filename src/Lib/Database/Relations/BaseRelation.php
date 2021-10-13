@@ -15,6 +15,16 @@ abstract class BaseRelation
 
     }
 
+    public function getTargetEntity() : string
+    {
+        return $this->targetEntity;
+    }
+
+    public function getSourceEntity() : string
+    {
+        return $this->sourceEntity;
+    }
+
     public function getSourceTable() : string
     {
         return $this->sourceTable;
