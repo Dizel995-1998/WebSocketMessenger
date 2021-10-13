@@ -2,8 +2,6 @@
 
 namespace Lib\Database\Reader;
 
-use Lib\Database\Relations\BaseRelation;
-
 class ArrayReader implements IReader
 {
     protected array $propertiesMapping;
@@ -14,12 +12,15 @@ class ArrayReader implements IReader
 
     protected array $associations = [];
 
+    protected ?string $primaryKey = null;
+
     public function __construct(array $arData)
     {
         $this->propertiesMapping = $arData['mapping'];
         $this->tableName = $arData['table_name'];
         $this->entityName = $arData['entity_name'];
         $this->associations = $arData['associations'] ?? [];
+        $this->primaryKey = $arData['primary_key'] ?? null;
     }
 
     public function getProperties(): array
@@ -70,5 +71,10 @@ class ArrayReader implements IReader
     public function getRelations(): array
     {
         return $this->associations;
+    }
+
+    public function getPrimaryKey(): ?string
+    {
+        return $this->primaryKey;
     }
 }

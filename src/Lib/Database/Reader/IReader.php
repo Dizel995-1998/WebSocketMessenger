@@ -6,12 +6,14 @@ use Lib\Database\Relations\BaseRelation;
 
 interface IReader
 {
+    public function getPrimaryKey() : ?string;
+
     public function getEntityName() : string;
 
     public function getTableName() : string;
 
     /**
-     * @return string[]
+     * @return <string, string> (PropertyName => ColumnName)
      */
     public function getProperties() : array;
 
