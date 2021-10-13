@@ -2,31 +2,35 @@
 
 namespace Lib\Database\Relations;
 
-use Lib\Database\Column\BaseColumn;
-
 abstract class BaseRelation
 {
-    protected BaseColumn $sourceColumn;
-    protected BaseColumn $targetColumn;
-
-    /**
-     * @param BaseColumn $sourceColumn
-     * @param BaseColumn $targetColumn
-     */
     public function __construct(
-        BaseColumn $sourceColumn,
-        BaseColumn $targetColumn
+        protected string $sourceColumn,
+        protected string $sourceTable,
+        protected string $targetColumn,
+        protected string $targetTable,
+        protected string $sourceEntity,
+        protected string $targetEntity
     ) {
-        $this->sourceColumn = $sourceColumn;
-        $this->targetColumn = $targetColumn;
+
     }
 
-    public function getSourceColumn() : BaseColumn
+    public function getSourceTable() : string
+    {
+        return $this->sourceTable;
+    }
+
+    public function getTargetTable() : string
+    {
+        return $this->targetTable;
+    }
+
+    public function getSourceColumn() : string
     {
         return $this->sourceColumn;
     }
 
-    public function getTargetColumn() : BaseColumn
+    public function getTargetColumn() : string
     {
         return $this->targetColumn;
     }
