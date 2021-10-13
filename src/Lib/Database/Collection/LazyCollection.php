@@ -6,6 +6,7 @@ use IteratorAggregate;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
 use Lib\Database\Reader\ArrayReader;
+use Lib\Database\Reader\ReflectionReader;
 use Lib\Database\Relations\BaseRelation;
 
 class LazyCollection implements IteratorAggregate
@@ -23,23 +24,17 @@ class LazyCollection implements IteratorAggregate
 
     public function getIterator()
     {
-        $dataCollection = (new QueryBuilder([
-            [
-                'FILE_ID' => 566,
-                'FILE_EXTENSION' => 'jpg'
-            ]
-        ]))->exec();
+        $dataCollection = (new QueryBuilder())
+            ->select(['*'])
+            ->from($this->relation->getSourceTable())
+            ->join($this->relation->getSourceColumn(), $this->relation->getTargetColumn(), $this->relation->getTargetTable())
+            ->where([$this->relation->getSourceTable() . '.ID' => 2]) // fixme: в отношениях не продумана логика условий where
+            ->exec(true);
+
         $arIterable = [];
 
         foreach ($dataCollection as $item) {
-            $arIterable[] = Hydrator::getEntity(new ArrayReader([
-                'mapping' => [
-                    'file_id' => 'FILE_ID',
-                    'extension' => 'FILE_EXTENSION'
-                ],
-                'entity_name' => \Picture::class,
-                'table_name' => 'users'
-            ]), $item);
+            $arIterable[] = Hydrator::getEntity(new ReflectionReader($this->relation->getTargetEntity()), $item);
         }
 
         return new \ArrayIterator($arIterable);
