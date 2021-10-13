@@ -2,8 +2,14 @@
 
 namespace Lib\Database\Reader;
 
+use Lib\Database\Relations\BaseRelation;
+
 interface IReader
 {
+    public function getEntityName() : string;
+
+    public function getTableName() : string;
+
     /**
      * @return string[]
      */
@@ -37,4 +43,9 @@ interface IReader
      * @return string|null
      */
     public static function getEntityClassNameByTable(string $tableName) : ?string;
+
+    /**
+     * @return <string, BaseRelation>
+     */
+    public function getRelations() : array;
 }
