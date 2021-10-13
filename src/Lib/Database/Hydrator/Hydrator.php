@@ -17,7 +17,10 @@ class Hydrator
             $propertyReflector = $reflectionClass->getProperty($propertyName);
 
             /** Если свойство не nullable типа, а в БД нет для него данных */
-            if (!$propertyReflector->getType()->allowsNull() && empty($dbData[$columnName])) {
+            if ($propertyReflector->getType()
+                && !$propertyReflector->getType()->allowsNull()
+                && empty($dbData[$columnName])
+            ) {
                 throw new \RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $metaData->getEntityName()));
             }
 
