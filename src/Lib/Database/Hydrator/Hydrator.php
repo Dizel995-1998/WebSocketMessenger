@@ -3,7 +3,6 @@
 namespace Lib\Database\Hydrator;
 
 use Lib\Database\Collection\LazyCollection;
-use Lib\Database\MetaData\MetaDataEntity;
 use Lib\Database\Reader\IReader;
 use ReflectionClass;
 
@@ -16,8 +15,14 @@ class Hydrator
 
         foreach ($metaData->getProperties() as $propertyName => $columnName) {
             $propertyReflector = $reflectionClass->getProperty($propertyName);
+
+            /** Если свойство не nullable типа, а в БД нет для него данных */
+            if (!$propertyReflector->getType()->allowsNull() && empty($dbData[$columnName])) {
+                throw new \RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $metaData->getEntityName()));
+            }
+
             $propertyReflector->setAccessible(true);
-            $propertyReflector->setValue($ormEntity, $dbData[$columnName]);
+            $propertyReflector->setValue($ormEntity, $dbData[$columnName] ?? null);
         }
 
         if ($associations = $metaData->getRelations()) {
