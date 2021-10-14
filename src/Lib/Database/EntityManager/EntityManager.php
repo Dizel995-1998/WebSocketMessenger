@@ -4,6 +4,7 @@ namespace Lib\Database\EntityManager;
 
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
+use Lib\Database\Reader\IReader;
 use Lib\Database\Reader\ReflectionReader;
 
 class EntityManager
@@ -11,8 +12,18 @@ class EntityManager
     /** @var array Коллекция восстановленных из БД объектов */
     protected static array $unitOfWork = [];
 
+    protected IReader $entityReader;
+
+    public function __construct(IReader $entityReader)
+    {
+        $this->entityReader = $entityReader;
+    }
+
     public function findBy(string $entityClassName, string $field, int|string $identify) : ?object
     {
+        if (!class_exists($entityClassName)) {
+            throw new \InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
+        }
 
         /** todo забрать тип рефлектора из контейнера */
         $reader = new ReflectionReader($entityClassName);
@@ -38,27 +49,7 @@ class EntityManager
 
     public function findByPrimaryKey(string $entityClassName, int|string $id) : ?object
     {
-        if (!class_exists($entityClassName)) {
-            throw new \InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
-        }
-
-        /** todo забрать тип рефлектора из контейнера */
-        $reader = new ReflectionReader($entityClassName);
-        $dbData =
-            (new QueryBuilder())
-            ->select(['*'])
-            ->from($reader->getTableName())
-            ->where([$reader->getPrimaryKey() => $id])
-            ->exec();
-
-        if (!$dbData) {
-            return null;
-        }
-
-        $entity = Hydrator::getEntity($reader, $dbData);
-
-        self::$unitOfWork[spl_object_hash($entity)] = $entity;
-        return $entity;
+        return $this->findBy($entityClassName, $this->entityReader->getPrimaryKey(), $id);
     }
 
     public function save(object $entity)

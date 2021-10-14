@@ -127,7 +127,8 @@ class QueryBuilder
     }
 
     /**
-     * TODO временно возвращает массив, будет возвращать обьект выборки
+     * fixme: Запрос не должен исполняться из QueryBuilder'a, он должен пробрасываться в объект IConnection
+     * TODO временно возвращает массив, будет возвращать объект выборки
      * @param bool $multipleRows
      * @return array
      */
