@@ -8,7 +8,9 @@ interface IReader
 {
     public function readEntity(string $entityClassName) : self;
 
-    public function getPrimaryKey() : ?string;
+    public function getPrimaryColumn() : ?string;
+
+    public function getPrimaryProperty() : ?string;
 
     public function getEntityName() : string;
 

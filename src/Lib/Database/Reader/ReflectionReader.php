@@ -7,17 +7,13 @@ use ReflectionProperty;
 class ReflectionReader implements IReader
 {
     const DOC_COMMENT_PREFIX = 'ORM';
-
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
-
     const DEFAULT_PRIMARY_KEY_COLUMN = 'id';
 
     protected string $entityClassName;
-
     protected string $tableName;
-
-    protected string $primaryKeyColumn;
-
+    protected ?string $primaryKeyColumn = null;
+    protected ?string $primaryKeyProperty = null;
     protected array $properties = [];
 
     protected function parse() : void
@@ -36,6 +32,8 @@ class ReflectionReader implements IReader
             $this->properties[$reflectionProperty->getName()] = $this->getColumnName($reflectionProperty->getDocComment());
         }
 
+        // fixme: убрать, если у сущности нет первичного ключа, это не значит что ей нужен дефолтный
+        $this->primaryKeyProperty = $this->primaryKeyProperty ?? 'id';
         $this->primaryKeyColumn  = $this->primaryKeyColumn ?? self::DEFAULT_PRIMARY_KEY_COLUMN;
     }
 
@@ -133,5 +131,15 @@ class ReflectionReader implements IReader
         $this->entityClassName = $entityClassName;
         $this->parse();
         return $this;
+    }
+
+    public function getPrimaryColumn(): ?string
+    {
+        return $this->primaryKeyColumn;
+    }
+
+    public function getPrimaryProperty(): ?string
+    {
+        return $this->primaryKeyProperty;
     }
 }

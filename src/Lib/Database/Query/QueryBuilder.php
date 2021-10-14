@@ -114,7 +114,7 @@ class QueryBuilder
         return (bool) $db->exec($sql);
     }
 
-    public function insert(string $tableName, array $fieldsValues)
+    public function insert(string $tableName, array $fieldsValues) : int|string
     {
         $sql = sprintf('INSERT INTO %s (%s) VALUES (%s)',
             $tableName,
@@ -123,7 +123,9 @@ class QueryBuilder
         );
 
         $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
-        return (bool) $db->exec($sql);
+        $db->exec($sql);
+
+        return $db->lastInsertId();
     }
 
     /**

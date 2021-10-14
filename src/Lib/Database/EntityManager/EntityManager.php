@@ -82,7 +82,12 @@ class EntityManager
             return (new QueryBuilder())->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
         }
 
-        // fixme: возвращать сущности её идентификатор - id
-        return (new QueryBuilder())->insert($this->entityReader->getTableName(), $arData);
+        // Присвоение идентификатора БД - сущности
+        $id = (new QueryBuilder())->insert($this->entityReader->getTableName(), $arData);
+
+        $propertyReflector = new \ReflectionProperty($entity, $this->entityReader->getPrimaryProperty());
+        $propertyReflector->setAccessible(true);
+        $propertyReflector->setValue($entity, $id);
+        return true;
     }
 }
