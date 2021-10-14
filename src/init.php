@@ -3,8 +3,6 @@
 use Lib\Container\Container;
 use Lib\Crypto\Crypto;
 use Lib\Crypto\ICrypto;
-use Lib\Database\Adapters\PdoConnection;
-use Lib\Database\Interfaces\IConnection;
 use Lib\Request\Request;
 
 $arDbConfig = [
@@ -23,7 +21,6 @@ $arRequestConfig = [
 ];
 
 Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
-Container::setService(IConnection::class, $arDbConfig, PdoConnection::class);
 Container::setService(Request::class, $arRequestConfig);
 
 /**
