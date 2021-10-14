@@ -70,14 +70,56 @@ class QueryBuilder
         return $this;
     }
 
+    protected function escapeExpression($expression) : int|string
+    {
+        return is_numeric($expression) ? $expression : "'$expression'";
+    }
+
+    protected function prepareFields(array $fields) : string
+    {
+        return implode(',', array_keys($fields));
+    }
+
+    protected function prepareValues(array $values) : string
+    {
+        return implode(',', array_map(function ($item) {
+            return $this->escapeExpression($item);
+        }, array_values($values)));
+    }
+
+    public function update(string $tableName, array $fieldsValues, array $whereExpression) : bool
+    {
+
+        $sql = "UPDATE $tableName SET ";
+
+        foreach ($fieldsValues as $field => $value) {
+            $sql .= $field . ' = ' . $this->escapeExpression($value) . ',';
+        }
+
+        // fixme: костыль
+        $sql = substr($sql, 0, -1);
+
+        if ($whereExpression) {
+            $sql .= ' WHERE ';
+
+            foreach ($whereExpression as $field => $value) {
+                $sql .= $field . ' = ' . $this->escapeExpression($value) . ',';
+            }
+
+            // fixme: костыль
+            $sql = substr($sql, 0, -1);
+        }
+
+        $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
+        return (bool) $db->exec($sql);
+    }
+
     public function insert(string $tableName, array $fieldsValues)
     {
         $sql = sprintf('INSERT INTO %s (%s) VALUES (%s)',
             $tableName,
-            implode(',', array_keys($fieldsValues)),
-            implode(',', array_map(function ($item) {
-                return is_numeric($item) ? $item : "'$item'";
-            }, array_values($fieldsValues)))
+            $this->prepareFields($fieldsValues),
+            $this->prepareValues($fieldsValues)
         );
 
         $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
