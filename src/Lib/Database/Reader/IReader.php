@@ -6,6 +6,8 @@ use Lib\Database\Relations\BaseRelation;
 
 interface IReader
 {
+    public function readEntity(string $entityClassName) : self;
+
     public function getPrimaryKey() : ?string;
 
     public function getEntityName() : string;

@@ -20,12 +20,6 @@ class ReflectionReader implements IReader
 
     protected array $properties = [];
 
-    public function __construct(string $entityClassName)
-    {
-        $this->entityClassName = $entityClassName;
-        $this->parse();
-    }
-
     protected function parse() : void
     {
         $reflectionClass = new \ReflectionClass($this->entityClassName);
@@ -132,5 +126,12 @@ class ReflectionReader implements IReader
     public function getRelations(): array
     {
         return [];
+    }
+
+    public function readEntity(string $entityClassName): self
+    {
+        $this->entityClassName = $entityClassName;
+        $this->parse();
+        return $this;
     }
 }

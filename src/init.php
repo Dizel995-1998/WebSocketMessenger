@@ -3,6 +3,8 @@
 use Lib\Container\Container;
 use Lib\Crypto\Crypto;
 use Lib\Crypto\ICrypto;
+use Lib\Database\Reader\IReader;
+use Lib\Database\Reader\ReflectionReader;
 use Lib\Request\Request;
 
 $arDbConfig = [
@@ -20,6 +22,7 @@ $arRequestConfig = [
     'requestData' => $_REQUEST
 ];
 
+Container::setService(IReader::class, [], ReflectionReader::class);
 Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
 Container::setService(Request::class, $arRequestConfig);
 

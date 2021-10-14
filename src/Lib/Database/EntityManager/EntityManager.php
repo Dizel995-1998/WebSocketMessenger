@@ -5,7 +5,6 @@ namespace Lib\Database\EntityManager;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
 use Lib\Database\Reader\IReader;
-use Lib\Database\Reader\ReflectionReader;
 
 class EntityManager
 {
@@ -25,15 +24,13 @@ class EntityManager
             throw new \InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
         }
 
-        /** todo забрать тип рефлектора из контейнера */
-        $reader = new ReflectionReader($entityClassName);
-
-        $whereColumn = $reader->getColumnNameByProperty($field);
+        $this->entityReader->readEntity($entityClassName);
+        $whereColumn = $this->entityReader->getColumnNameByProperty($field);
 
         $dbData =
             (new QueryBuilder())
                 ->select(['*'])
-                ->from($reader->getTableName())
+                ->from($this->entityReader->getTableName())
                 ->where([$whereColumn => $identify])
                 ->exec();
 
@@ -41,7 +38,7 @@ class EntityManager
             return null;
         }
 
-        $entity = Hydrator::getEntity($reader, $dbData);
+        $entity = Hydrator::getEntity($this->entityReader, $dbData);
 
         self::$unitOfWork[spl_object_hash($entity)] = $entity;
         return $entity;
@@ -52,12 +49,15 @@ class EntityManager
         return $this->findBy($entityClassName, $this->entityReader->getPrimaryKey(), $id);
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     public function save(object $entity)
     {
-        $reader = new ReflectionReader(get_class($entity));
+        $this->entityReader->readEntity(get_class($entity));
         $arData = [];
 
-        foreach ($reader->getProperties() as $propertyName => $columnName) {
+        foreach ($this->entityReader->getProperties() as $propertyName => $columnName) {
             // fixme: hardcode
             if ($propertyName == 'id') {
                 continue;
@@ -79,10 +79,10 @@ class EntityManager
 
         // fixme: hardCode getId method, must be part of interface
         if (isset(self::$unitOfWork[spl_object_hash($entity)])) {
-            return (new QueryBuilder())->update($reader->getTableName(), $arData, [$reader->getPrimaryKey() => $entity->getId()]);
+            return (new QueryBuilder())->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
         }
 
         // fixme: возвращать сущности её идентификатор - id
-        return (new QueryBuilder())->insert($reader->getTableName(), $arData);
+        return (new QueryBuilder())->insert($this->entityReader->getTableName(), $arData);
     }
 }
