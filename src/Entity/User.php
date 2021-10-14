@@ -11,22 +11,34 @@ use Lib\Database\Relations\OneToMany;
 class User implements \JsonSerializable
 {
     /**
-     * @ORM\StringColumn({"name":"NAME"})
+     * @ORM\IntegerColumn({"name":"id"})
+     * @var int|null
+     */
+    protected ?int $id = null;
+
+    /**
+     * @ORM\StringColumn({"name":"name"})
      * @var string
      */
     protected string $name;
 
     /**
-     * @ORM\StringColumn({"name":"LAST_NAME"})
-     * @var string
+     * @ORM\StringColumn({"name":"external_id"})
+     * @var null|string
      */
-    protected string $last_name;
+    protected ?string $externalId = null;
 
     /**
-     * @ORM\IntegerColumn({"name":"ID"})
-     * @var int|null
+     * @ORM\StringColumn({"name":"picture_url"})
+     * @var null|string
      */
-    protected ?int $id;
+    protected ?string $pictureUrl = null;
+
+    /**
+     * @ORM\StringColumn({"name":"status"})
+     * @var null|string
+     */
+    protected ?string $status = null;
 
 //    /**
 //     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
@@ -40,16 +52,40 @@ class User implements \JsonSerializable
         return $this;
     }
 
-    public function setLastName(string $lastName) : self
+    public function setPictureUrl(string $pictureUrl)
     {
-        $this->last_name = $lastName;
+        $this->pictureUrl = $pictureUrl;
         return $this;
     }
 
-    public function getLastName() : ?string
+    public function getPictureUrl() : ?string
     {
-        return $this->last_name;
+        return $this->pictureUrl;
     }
+
+    public function getExternalId() : ?string
+    {
+        return $this->externalId;
+    }
+
+    public function setExternalId(string $externalId) : self
+    {
+        $this->externalId = $externalId;
+        return $this;
+    }
+
+    public function setStatus(string $status) : self
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    public function getStatus() : ?string
+    {
+        return $this->status;
+    }
+
+
 
     public function getName() : ?string
     {
@@ -70,10 +106,15 @@ class User implements \JsonSerializable
 
     public function jsonSerialize()
     {
-        return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'last_name' => $this->last_name,
-        ];
+        $res = [];
+
+        $reflection = new \ReflectionClass(static::class);
+
+        foreach ($reflection->getProperties(\ReflectionProperty::IS_PROTECTED) as $property) {
+            $property->setAccessible(true);
+            $res[$property->getName()] = $property->getValue($this);
+        }
+
+        return $res;
     }
 }
