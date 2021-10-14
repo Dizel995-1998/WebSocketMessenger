@@ -11,6 +11,31 @@ class EntityManager
     /** @var array Коллекция восстановленных из БД объектов */
     protected static array $unitOfWork = [];
 
+    public function findBy(string $entityClassName, string $field, int|string $identify) : ?object
+    {
+
+        /** todo забрать тип рефлектора из контейнера */
+        $reader = new ReflectionReader($entityClassName);
+
+        $whereColumn = $reader->getColumnNameByProperty($field);
+
+        $dbData =
+            (new QueryBuilder())
+                ->select(['*'])
+                ->from($reader->getTableName())
+                ->where([$whereColumn => $identify])
+                ->exec();
+
+        if (!$dbData) {
+            return null;
+        }
+
+        $entity = Hydrator::getEntity($reader, $dbData);
+
+        self::$unitOfWork[spl_object_hash($entity)] = $entity;
+        return $entity;
+    }
+
     public function findByPrimaryKey(string $entityClassName, int|string $id) : ?object
     {
         if (!class_exists($entityClassName)) {

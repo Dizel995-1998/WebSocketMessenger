@@ -111,7 +111,7 @@ class ReflectionReader implements IReader
 
     public function getColumnNameByProperty(string $propertyName): ?string
     {
-        // TODO: Implement getColumnNameByProperty() method.
+        return $this->properties[$propertyName];
     }
 
     public function getPropertyNameByColumn(string $columnName): ?string
