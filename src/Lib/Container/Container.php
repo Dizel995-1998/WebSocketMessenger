@@ -74,29 +74,29 @@ class Container implements ContainerInterface
 
             foreach ($serviceDependencies as $dependency) {
                 /** Если у зависимости есть дефолтное значение, взять его */
-                if (!self::$services[$resolveService]['args'][$dependency->getName()] && $dependency->isDefaultValueAvailable()) {
+                if (!isset(self::$services[$resolveService]['args'][$dependency->getName()]) && $dependency->isDefaultValueAvailable()) {
                     $arDependencies[] = $dependency->getDefaultValue();
                     continue;
                 }
 
-                /** Если зависимость не класс, а примитивный тип */
-                if (!$dependency->getClass()) {
-                    if (!$primitiveTypeValue = self::$services[$resolveService]['args'][$dependency->getName()]) {
-                        throw new
-                            RuntimeException(
-                                sprintf('Can\'t resolve primitive dependencies, arg "%s" have no value "%s" class',
-                                    $dependency->getName(),
-                                    $resolveService
-                                )
-                        );
-                    }
-
-                    $arDependencies[] = $primitiveTypeValue;
+                /*** Если зависимость есть класс, попытаться найти зависимости зависимостей */
+                if ($dependency->getType() && !$dependency->getType()->isBuiltin()) {
+                    $arDependencies[] = self::getService($dependency->getName());
                     continue;
                 }
 
-                /*** Если зависимость есть класс, попытаться найти зависимости зависимостей */
-                $arDependencies[] = self::getService($dependency->getClass()->getName());
+                /** Если зависимость не класс, а примитивный тип */
+                if (!isset(self::$services[$resolveService]['args'][$dependency->getName()])) {
+                    throw new
+                        RuntimeException(
+                            sprintf('Can\'t resolve primitive dependencies, arg "%s" have no value "%s" class',
+                                $dependency->getName(),
+                                $resolveService
+                            )
+                    );
+                }
+
+                $arDependencies[] = self::$services[$resolveService]['args'][$dependency->getName()];
             }
         }
 
