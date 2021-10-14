@@ -16,9 +16,12 @@ class GoogleAuth
 
     protected string $clientId;
     protected string $clientSecret;
+    // fixme: поменять на интерфейс
+    protected Client $client;
 
-    public function __construct(?string $clientId = null, ?string $clientSecret = null)
+    public function __construct(Client $client, ?string $clientId = null, ?string $clientSecret = null)
     {
+        $this->client = $client;
         $this->clientId = $clientId ?: self::DEFAULT_CLIENT_ID;
         $this->clientSecret = $clientSecret ?: self::DEFAULT_CLIENT_SECRET;
     }
@@ -41,7 +44,6 @@ class GoogleAuth
     }
 
     /**
-     * fixme: после фикса сервис провайдера - прокинуть guzzle через аргументы
      * @param string $code
      * @return GoogleAccessTokenDto
      * @throws GuzzleException
@@ -56,8 +58,7 @@ class GoogleAuth
             'code'          => $code
         ];
 
-        $client = new Client();
-        $response = $client->post(self::AUTH_SERVER_URL . '/token', [
+        $response = $this->client->post(self::AUTH_SERVER_URL . '/token', [
             'form_params' => $params,
             'allow_redirects' => true,
         ]);
