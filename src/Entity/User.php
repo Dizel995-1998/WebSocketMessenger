@@ -2,107 +2,37 @@
 
 namespace Entity;
 
-use Lib\Database\ArrayCollection;
-use Lib\Database\DataManager;
-use Lib\Database\Interfaces\IConnection;
+use Lib\Database\Collection\LazyCollection;
+use Lib\Database\Relations\OneToMany;
 
-class User extends DataManager
+/**
+ * @ORM\Table({"name":"users"})
+ */
+class User implements \JsonSerializable
 {
     /**
-     * @ORM primary_key ID
-     * @ORM type int
-     * @ORM column_name ID
-     * @var int|null
-     */
-    protected ?int $id = null;
-
-    /**
-     * @ORM type varchar(50)
-     * @ORM column_name NAME
+     * @ORM\StringColumn({"name":"NAME"})
      * @var string
      */
     protected string $name;
 
     /**
-     * @ORM type varchar(50)
-     * @ORM column_name LOGIN
+     * @ORM\StringColumn({"name":"LAST_NAME"})
      * @var string
      */
-    protected string $login;
+    protected string $last_name;
 
     /**
-     * @ORM type varchar(100)
-     * @ORM column_name PASSWORD_HASH
-     * @var string
+     * @ORM\IntegerColumn({"name":"ID"})
+     * @var int|null
      */
-    protected string $passwordHash;
+    protected ?int $id;
 
-    /**
-     * @ORM type varchar(100)
-     * @ORM column_name PICTURE_URL
-     * @var string|null
-     */
-    protected ?string $pictureUrl;
-
-    public function getUserGroups() : ArrayCollection
-    {
-        $conn = \Lib\Container\Container::getService(IConnection::class);
-        $db = $conn->query(sprintf(
-            'SELECT b_user_group.* FROM b_user_group
-                JOIN b_users_groups ON b_users_groups.GROUP_ID = b_user_group.ID
-                JOIN b_user ON b_users_groups.USER_ID = b_user.ID WHERE USER_ID = %d', $this->id)
-        );
-
-        $collection = new ArrayCollection();
-
-        while ($tmp = $db->fetch()) {
-            $collection->addElement($tmp);
-        }
-
-        return $collection;
-    }
-
-    public static function getTableName(): string
-    {
-        return 'b_user';
-    }
-
-    public function getId() : ?int
-    {
-        return $this->id;
-    }
-
-    public function getName() : string
-    {
-        return $this->name;
-    }
-
-    public function getLogin() : string
-    {
-        return $this->login;
-    }
-
-    public function getPasswordHash() : string
-    {
-        return $this->passwordHash;
-    }
-
-    public function getPictureUrl() : string
-    {
-        return $this->pictureUrl;
-    }
-
-    public function setPictureUrl(string $pictureUrl) : self
-    {
-        $this->pictureUrl = $pictureUrl;
-        return $this;
-    }
-
-    public function setLogin(string $login) : self
-    {
-        $this->login = $login;
-        return $this;
-    }
+//    /**
+//     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
+//     * @var
+//     */
+//    protected $pictures;
 
     public function setName(string $name) : self
     {
@@ -110,9 +40,40 @@ class User extends DataManager
         return $this;
     }
 
-    public function setPasswordHash(string $passwordHash) : self
+    public function setLastName(string $lastName) : self
     {
-        $this->passwordHash = $passwordHash;
+        $this->last_name = $lastName;
         return $this;
+    }
+
+    public function getLastName() : ?string
+    {
+        return $this->last_name;
+    }
+
+    public function getName() : ?string
+    {
+        return $this->name;
+    }
+
+    public function getId() : ?int
+    {
+        return $this->id;
+    }
+
+    public function getPictures()
+    {
+        return new LazyCollection(
+            new OneToMany('ID', 'users', 'USER_ID', 'pictures', User::class, Picture::class)
+        );
+    }
+
+    public function jsonSerialize()
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'last_name' => $this->last_name,
+        ];
     }
 }
