@@ -81,7 +81,7 @@ class Container implements ContainerInterface
 
                 /*** Если зависимость есть класс, попытаться найти зависимости зависимостей */
                 if ($dependency->getType() && !$dependency->getType()->isBuiltin()) {
-                    $arDependencies[] = self::getService($dependency->getName());
+                    $arDependencies[] = self::getService($dependency->getType()->getName());
                     continue;
                 }
 
