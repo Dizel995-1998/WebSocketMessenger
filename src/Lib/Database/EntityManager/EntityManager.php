@@ -2,13 +2,15 @@
 
 namespace Lib\Database\EntityManager;
 
-use GuzzleHttp\Psr7\Query;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
 use Lib\Database\Reader\ReflectionReader;
 
 class EntityManager
 {
+    /** @var array Коллекция восстановленных из БД объектов */
+    protected static array $unitOfWork = [];
+
     public function findByPrimaryKey(string $entityClassName, int|string $id) : ?object
     {
         if (!class_exists($entityClassName)) {
@@ -28,7 +30,10 @@ class EntityManager
             return null;
         }
 
-        return Hydrator::getEntity($reader, $dbData);
+        $entity = Hydrator::getEntity($reader, $dbData);
+
+        self::$unitOfWork[spl_object_hash($entity)] = $entity;
+        return $entity;
     }
 
     public function save(object $entity)
@@ -44,9 +49,24 @@ class EntityManager
 
             $propertyReflector = new \ReflectionProperty($entity, $propertyName);
             $propertyReflector->setAccessible(true);
+
+            // todo: в будущем так же сделать проверку на nullable из ридера
+            if (
+                !$propertyReflector->hasDefaultValue() &&
+                !$propertyReflector->isInitialized($entity)
+            ) {
+                throw new \RuntimeException(sprintf('Сущность "%s" имеет не инициализированное свойство: "%s"', get_class($entity), $propertyName));
+            }
+
             $arData[$columnName] = $propertyReflector->getValue($entity);
         }
 
+        // fixme: hardCode getId method, must be part of interface
+        if (isset(self::$unitOfWork[spl_object_hash($entity)])) {
+            return (new QueryBuilder())->update($reader->getTableName(), $arData, [$reader->getPrimaryKey() => $entity->getId()]);
+        }
+
+        // fixme: возвращать сущности её идентификатор - id
         return (new QueryBuilder())->insert($reader->getTableName(), $arData);
     }
 }
