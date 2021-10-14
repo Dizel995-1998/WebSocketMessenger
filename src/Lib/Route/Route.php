@@ -107,17 +107,17 @@ class Route implements IRoute
                 }
             } catch (Exception $e) {
                 // todo дубль кода, должно быть инкапсулировано в классы response
-                return new JsonResponse(422, ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+                return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], 422);
             }
         }
 
         try {
             return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction, $matches) : $this->runCallableController($this->controller, $matches);
         } catch (HttpErrorException $e) {
-            return new JsonResponse($e->getHttpErrorCode(), ['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()]);
+            return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], $e->getHttpErrorCode());
         } catch (Throwable $e) {
             // какая то внутренняя ошибка, или ошибка из сторонних пакетов
-            return new JsonResponse(400, ['error' => true, 'code' => $e->getMessage()]);
+            return new JsonResponse(['error' => true, 'code' => $e->getMessage()], 400);
         }
     }
 

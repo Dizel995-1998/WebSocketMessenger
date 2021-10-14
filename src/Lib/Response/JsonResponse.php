@@ -9,8 +9,8 @@ class JsonResponse extends Response
     const CONTENT_TYPE = 'application/json';
 
     public function __construct(
-        int $status = 200,
         $body = null,
+        int $status = 200,
         array $headers = [],
         string $version = '1.1',
         string $reason = null
