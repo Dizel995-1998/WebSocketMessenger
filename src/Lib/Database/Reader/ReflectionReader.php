@@ -2,19 +2,37 @@
 
 namespace Lib\Database\Reader;
 
+use Lib\Database\Column\IntegerColumn;
+use Lib\Database\Column\PrimaryKey;
+use Lib\Database\Column\StringColumn;
 use ReflectionProperty;
 
 class ReflectionReader implements IReader
 {
     const DOC_COMMENT_PREFIX = 'ORM';
+    const DOC_TABLE_NAME = 'Table';
+
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
     const DEFAULT_PRIMARY_KEY_COLUMN = 'id';
+
+    const ALLOW_COLUMN_TYPES = [IntegerColumn::class, StringColumn::class, PrimaryKey::class];
 
     protected string $entityClassName;
     protected string $tableName;
     protected ?string $primaryKeyColumn = null;
     protected ?string $primaryKeyProperty = null;
     protected array $properties = [];
+
+    /**
+     * Возвращает название класса без namespace
+     * @param string $className
+     * @return string
+     * @throws \ReflectionException
+     */
+    protected function getShortClassName(string $className) : string
+    {
+        return (new \ReflectionClass($className))->getShortName();
+    }
 
     protected function parse() : void
     {
@@ -29,7 +47,21 @@ class ReflectionReader implements IReader
                 continue;
             }
 
-            $this->properties[$reflectionProperty->getName()] = $this->getColumnName($reflectionProperty->getDocComment());
+            if ($columnName = $this->getDataByPhpTag($reflectionProperty->getDocComment(), [$this->getShortClassName(PrimaryKey::class)])) {
+                $this->primaryKeyProperty = $reflectionProperty->getName();
+                $this->primaryKeyColumn = $columnName;
+            }
+
+            /** Процедура избавления названий классов от namespace, чтобы в будущем замапиться на ORM объекты типов */
+            // fixme: сделано черезчур громоздко
+            $allowOrmTypes = [];
+
+            foreach (self::ALLOW_COLUMN_TYPES as $allowType) {
+                $allowOrmTypes[] = $this->getShortClassName($allowType);
+            }
+
+            /*** Название свойства -> Название колонки */
+            $this->properties[$reflectionProperty->getName()] = $this->getDataByPhpTag($reflectionProperty->getDocComment(), $allowOrmTypes);
         }
 
         // fixme: убрать, если у сущности нет первичного ключа, это не значит что ей нужен дефолтный
@@ -39,36 +71,26 @@ class ReflectionReader implements IReader
 
     protected function extractTableNameFromDoc(string $phpDoc) : ?string
     {
-        return $this->getColumnName($phpDoc) ?: null;
+        return $this->getDataByPhpTag($phpDoc, [self::DOC_TABLE_NAME]);
     }
 
-    protected function getColumnName(string $phpDoc, ?string $defaultColumn = null) : string
+    protected function getDataByPhpTag(string $phpDoc, array $allowTypes) : ?string
     {
-        $regexPattern = '~ORM\\D+(?<json>({(.*)}))~';
+        $regexPattern = '/' . self::DOC_COMMENT_PREFIX . '\\\(?<column>' . implode('|', $allowTypes) . ') ?\((?<json>.+)\)/';
 
         if (!preg_match($regexPattern, $phpDoc, $matches)) {
-            throw new \InvalidArgumentException('Column was dont found in phpDoc');
+            return null;
         }
 
         if (!$jsonDecode = json_decode($matches['json'], true)) {
             throw new \InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
         }
 
-        if (!isset($jsonDecode['NAME']) && !isset($jsonDecode['name']) && !$defaultColumn) {
+        if (!isset($jsonDecode['NAME']) && !isset($jsonDecode['name'])) {
             throw new \InvalidArgumentException('Cannot find name column');
         }
 
-        return $jsonDecode['name'] ?: $jsonDecode['NAME'] ?: $defaultColumn;
-    }
-
-    protected function isPrimaryKey() : bool
-    {
-
-    }
-
-    protected function isRelation() : bool
-    {
-
+        return $jsonDecode['name'] ?: $jsonDecode['NAME'];
     }
 
     protected function isValidOrmDoc(string $phpDoc) : bool
@@ -98,7 +120,7 @@ class ReflectionReader implements IReader
 
     public function getColumns(): array
     {
-        // TODO: Implement getColumns() method.
+        return array_values($this->properties);
     }
 
     public function getColumnNameByProperty(string $propertyName): ?string

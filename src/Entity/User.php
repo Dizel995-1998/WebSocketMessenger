@@ -4,6 +4,7 @@ namespace Entity;
 
 use Lib\Database\Collection\LazyCollection;
 use Lib\Database\Relations\OneToMany;
+use Lib\Database\Column as ORM;
 
 /**
  * @ORM\Table({"name":"users"})
@@ -11,7 +12,7 @@ use Lib\Database\Relations\OneToMany;
 class User implements \JsonSerializable
 {
     /**
-     * @ORM\IntegerColumn({"name":"id"})
+     * @ORM\PrimaryKey({"name":"id"})
      * @var int|null
      */
     protected ?int $id = null;
