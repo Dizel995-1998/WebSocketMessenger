@@ -17,9 +17,9 @@ use Service\GoogleAuth\GoogleAuth;
 class UserController
 {
     /**
-     * @throws BadRequest
+     * @throws BadRequest|\ReflectionException
      */
-    public function authorizeMe(Request $request, EntityManager $entityManager, JwtToken $token) : ResponseInterface
+    public function authorizeMe(Request $request, EntityManager $entityManager, JwtToken $jwtToken) : ResponseInterface
     {
         $user = $entityManager->findBy(User::class, [
             'login' => $request->get('login'),
@@ -30,14 +30,18 @@ class UserController
             throw new BadRequest('Incorrect login or password');
         }
 
-        $token->setUserId($user->getId());
+        $token = (string) ($jwtToken->setUserId($user->getId()));
 
         // Вносим токен в табличку активных токенов
-        $accessToken = (new AccessToken())->setToken((string) $token);
+        $accessToken = $entityManager->findBy(AccessToken::class, ['userId' => $user->getId()]) ?? new AccessToken();
+        $accessToken
+            ->setToken($token)
+            ->setUserId($user->getId());
+
         $entityManager->save($accessToken);
 
         // todo: Это ещё не полноценный JWT, нет refresh токена
-        return new JsonResponse(['access_token' => (string) $token]);
+        return new JsonResponse(['access_token' => $token]);
     }
 
     public function me(Request $request, EntityManager $entityManager, $id): ResponseInterface

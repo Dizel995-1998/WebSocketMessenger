@@ -4,6 +4,7 @@ use Lib\Route\Route;
 use Controller\UserController;
 use Middleware\ChangeUserPasswordMiddleware;
 use Middleware\CreateUserMiddleware;
+use Middleware\SignInMiddleware;
 use Middleware\UpdateUserMiddleware;
 
 return [
@@ -18,7 +19,7 @@ return [
         ->addMiddleware(CreateUserMiddleware::class),
 
     (new Route('/user/auth', 'POST', UserController::class, 'authorizeMe'))
-        ->addMiddleware(SignInMiddleware::class)
+        ->addMiddleware(SignInMiddleware::class),
 
     (new Route('/user/password', 'PUT', UserController::class, 'updatePassword'))
         ->addMiddleware(ChangeUserPasswordMiddleware::class)
