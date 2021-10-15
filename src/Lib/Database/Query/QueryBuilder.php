@@ -63,10 +63,10 @@ class QueryBuilder
         $preparedExpression = '';
 
         foreach ($filter as $column => $value) {
-            $preparedExpression .= $column . (is_array($value) ? ' IN ' : ' = ') . "('$value')";
+            $preparedExpression .= ' AND ' . $column . (is_array($value) ? ' IN ' : ' = ') . "('$value')";
         }
 
-        $this->sql .= 'WHERE ' . $preparedExpression;
+        $this->sql .= 'WHERE 1=1 ' . $preparedExpression;
         return $this;
     }
 

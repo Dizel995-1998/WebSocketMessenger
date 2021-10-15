@@ -18,20 +18,26 @@ class EntityManager
         $this->entityReader = $entityReader;
     }
 
-    public function findBy(string $entityClassName, string $field, int|string $identify) : ?object
+    public function findBy(string $entityClassName, array $whereCondition) : ?object
     {
         if (!class_exists($entityClassName)) {
             throw new \InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
         }
 
         $this->entityReader->readEntity($entityClassName);
-        $whereColumn = $this->entityReader->getColumnNameByProperty($field);
+
+        /** Выражение с уже подставленными колонками вместо названий свойств **/
+        $preparedCondition = [];
+
+        foreach ($whereCondition as $propName => $propValue) {
+            $preparedCondition[$this->entityReader->getColumnNameByProperty($propName)] = $propValue;
+        }
 
         $dbData =
             (new QueryBuilder())
                 ->select(['*'])
                 ->from($this->entityReader->getTableName())
-                ->where([$whereColumn => $identify])
+                ->where($preparedCondition)
                 ->exec();
 
         if (!$dbData) {
