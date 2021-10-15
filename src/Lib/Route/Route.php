@@ -2,20 +2,27 @@
 
 namespace Lib\Route;
 
-use Exception;
 use InvalidArgumentException;
 use Lib\Container\Container;
-use Lib\Middleware\IMiddleware;
-use Lib\Response\BadRequest;
 use Lib\Response\HttpErrorException;
 use Lib\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\RequestInterface;
-use GuzzleHttp\Psr7\Response;
+use ReflectionException;
 use Throwable;
 
 class Route implements IRoute
 {
+    /**
+     * Метод обработчик в посредниках
+     * @var string
+     */
+    const MIDDLEWARE_METHOD_HANDLER = 'handle';
+
+    /**
+     * Допустимые HTTP методы
+     * @var string[]
+     */
     const ALLOW_HTTP_VERBS = [
         'GET',
         'POST',
@@ -24,19 +31,19 @@ class Route implements IRoute
         'PUT'
     ];
 
-    /*** @var string[] array */
+    /*** @var string[] array Названия классов посредников */
     private array $arMiddlewares = [];
 
-    /*** @var string|callable */
+    /*** @var string|callable Название класса контроллера или callable */
     private $controller;
 
-    /*** @var string */
+    /*** @var string Паттерн для вызова контроллера */
     private string $patternUrl;
 
-    /*** @var string  */
+    /*** @var string HTTP метод на который реагирует контроллер */
     private string $method;
 
-    /** @var string  */
+    /** @var string Метод класса контроллера, если контроллер оформлен в виде класса */
     private string $controllerAction;
 
     /**
@@ -93,31 +100,49 @@ class Route implements IRoute
     }
 
     /**
+     * Запускает слой посредников/Middleware для данного роута
+     * @return void|null
+     * @throws ReflectionException|HttpErrorException
+     */
+    public function runMiddlewares()
+    {
+        if (!isset($this->arMiddlewares)) {
+            return null;
+        }
+
+        foreach ($this->arMiddlewares as $middleware) {
+            Container::resolveMethodDependencies(Container::getService($middleware), self::MIDDLEWARE_METHOD_HANDLER);
+        }
+    }
+
+    /**
      * Запускает контроллер роута
      * @param RequestInterface $request
      * @param array $matches
      * @return ResponseInterface
+     * @throws ReflectionException
      */
     public function runController(RequestInterface $request, array $matches = []): ResponseInterface
     {
-        if ($this->arMiddlewares) {
-            try {
-                foreach ($this->arMiddlewares as $middleware) {
-                    Container::resolveMethodDependencies(Container::getService($middleware), 'handle');
-                }
-            } catch (Exception $e) {
-                // todo дубль кода, должно быть инкапсулировано в классы response
-                return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], 422);
-            }
+        try {
+            $this->runMiddlewares();
+        } catch (HttpErrorException $e) {
+            return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], $e->getHttpErrorCode());
         }
 
         try {
-            return is_string($this->controller) ? $this->runStringController($this->controller, $this->controllerAction, $matches) : $this->runCallableController($this->controller, $matches);
+            $responseController = is_string($this->controller) ?
+                $this->runStringController($this->controller, $this->controllerAction, $matches) :
+                $this->runCallableController($this->controller, $matches);
+
+            $jsonData = json_decode($responseController->getBody()->getContents(), true);
+            return new JsonResponse(['data' => $jsonData], 200);
+
         } catch (HttpErrorException $e) {
             return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], $e->getHttpErrorCode());
         } catch (Throwable $e) {
             // какая то внутренняя ошибка, или ошибка из сторонних пакетов
-            return new JsonResponse(['error' => true, 'code' => $e->getMessage()], 400);
+            return new JsonResponse(['error' => true, 'code' => $e->getMessage()], 500);
         }
     }
 
@@ -125,8 +150,9 @@ class Route implements IRoute
      * Запуск контроллера оформленного в виде класса
      * @param string $controllerName
      * @param string $controllerAction
+     * @param array $matches
      * @return ResponseInterface
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function runStringController(string $controllerName, string $controllerAction, array $matches = []) : ResponseInterface
     {
@@ -145,7 +171,7 @@ class Route implements IRoute
      * Вызов контроллера оформленного в виде callable функции
      * @param callable $controller
      * @return ResponseInterface
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function runCallableController(callable $controller) : ResponseInterface
     {
@@ -154,7 +180,7 @@ class Route implements IRoute
 
     public function addMiddleware(string $middleware) : self
     {
-        if (array_flip(get_class_methods($middleware))['handle'] === null) {
+        if (array_flip(get_class_methods($middleware))[self::MIDDLEWARE_METHOD_HANDLER] === null) {
             throw new InvalidArgumentException(sprintf('Посредник %s не имеет метода обработчика', $middleware));
         }
 
