@@ -13,8 +13,6 @@ class ReflectionReader implements IReader
     const DOC_TABLE_NAME = 'Table';
 
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
-    const DEFAULT_PRIMARY_KEY_COLUMN = 'id';
-
     const ALLOW_COLUMN_TYPES = [IntegerColumn::class, StringColumn::class, PrimaryKey::class];
 
     protected string $entityClassName;
@@ -64,9 +62,9 @@ class ReflectionReader implements IReader
             $this->properties[$reflectionProperty->getName()] = $this->getDataByPhpTag($reflectionProperty->getDocComment(), $allowOrmTypes);
         }
 
-        // fixme: убрать, если у сущности нет первичного ключа, это не значит что ей нужен дефолтный
-        $this->primaryKeyProperty = $this->primaryKeyProperty ?? 'id';
-        $this->primaryKeyColumn  = $this->primaryKeyColumn ?? self::DEFAULT_PRIMARY_KEY_COLUMN;
+        if (!$this->primaryKeyProperty) {
+            throw new \RuntimeException(sprintf('У сущности "%s" отсутствует первичный ключ', $this->entityClassName));
+        }
     }
 
     protected function extractTableNameFromDoc(string $phpDoc) : ?string
