@@ -100,9 +100,6 @@ class UserController
 
     public function test(EntityManager $entityManager)
     {
-        $user = (new User())->setName('Шамиль');
-        $entityManager->save($user);
-
-        return new JsonResponse($user);
+        return new JsonResponse('Я закрыт поинтом авторизации');
     }
 }
