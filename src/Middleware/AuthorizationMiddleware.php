@@ -2,7 +2,7 @@
 
 namespace Middleware;
 
-class Authorization extends BaseMiddleware
+class AuthorizationMiddleware extends BaseMiddleware
 {
     function getValidationRules(): array
     {

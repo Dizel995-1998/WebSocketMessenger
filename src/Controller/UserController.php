@@ -25,6 +25,11 @@ class UserController
         return new Response(200, [], $googleAuth->formAuthLink());
     }
 
+    public function updatePassword(Request $request)
+    {
+
+    }
+
     public function login(Request $request, GoogleAuth $googleAuth, EntityManager $entityManager)
     {
         if (!$code = $request->get('code')) {
@@ -47,11 +52,18 @@ class UserController
         return new JsonResponse($user);
     }
 
-    public function createUser(Request $request, EntityManager $entityManager) : ResponseInterface
+    /**
+     * @param Request $request
+     * @param EntityManager $entityManager
+     * @return ResponseInterface
+     * @throws \ReflectionException
+     */
+    public function create(Request $request, EntityManager $entityManager) : ResponseInterface
     {
         $user = (new User())
             ->setName($request->get('name'))
             ->setStatus($request->get('status'))
+            ->setPassword($request->get('password'))
             ->setPictureUrl('');
 
         return new JsonResponse($entityManager->save($user));
