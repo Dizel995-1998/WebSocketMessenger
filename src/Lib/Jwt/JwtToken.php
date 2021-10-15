@@ -8,6 +8,10 @@ use Lib\Container\Container;
 use Lib\Crypto\ICrypto;
 use RuntimeException;
 
+/**
+ * TODO ввести свои виды исключений
+ * fixme: необходим рефакторинг
+ */
 class JwtToken
 {
     /**

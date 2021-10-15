@@ -4,6 +4,9 @@ namespace Lib\Database\Query;
 
 use PDO;
 
+/**
+ * fixme: необходимо экранирование
+ */
 class QueryBuilder
 {
     protected string $sql = '';
