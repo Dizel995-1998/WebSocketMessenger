@@ -43,6 +43,6 @@ class HttpRouter
             }
         }
 
-        return new JsonResponse(self::HTTP_CODE_NOT_FOUND, ['code' => 'not found']);
+        return new JsonResponse(['code' => 'not found'], self::HTTP_CODE_NOT_FOUND);
     }
 }
