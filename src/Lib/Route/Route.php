@@ -180,8 +180,8 @@ class Route implements IRoute
 
     public function addMiddleware(string $middleware) : self
     {
-        if (array_flip(get_class_methods($middleware))[self::MIDDLEWARE_METHOD_HANDLER] === null) {
-            throw new InvalidArgumentException(sprintf('Посредник %s не имеет метода обработчика', $middleware));
+        if (!method_exists($middleware, self::MIDDLEWARE_METHOD_HANDLER)) {
+            throw new InvalidArgumentException(sprintf('Посредник "%s" не имеет метода обработчика', $middleware));
         }
 
         $this->arMiddlewares[] = $middleware;
