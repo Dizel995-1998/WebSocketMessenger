@@ -80,5 +80,6 @@ abstract class BaseColumn
         return $this->columnName;
     }
 
+    // todo: вернуть что за тип, тот который в БД?
     abstract public function getType(): string;
 }
