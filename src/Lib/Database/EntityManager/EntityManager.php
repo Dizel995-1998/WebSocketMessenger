@@ -11,11 +11,12 @@ class EntityManager
     /** @var array Коллекция восстановленных из БД объектов */
     protected static array $unitOfWork = [];
 
-    protected IReader $entityReader;
 
-    public function __construct(IReader $entityReader)
-    {
-        $this->entityReader = $entityReader;
+    public function __construct(
+        protected IReader $entityReader,
+        protected QueryBuilder $queryBuilder
+    ) {
+
     }
 
     public function findBy(string $entityClassName, array $whereCondition) : ?object
@@ -34,7 +35,7 @@ class EntityManager
         }
 
         $dbData =
-            (new QueryBuilder())
+            $this->queryBuilder
                 ->select(['*'])
                 ->from($this->entityReader->getTableName())
                 ->where($preparedCondition)
@@ -90,11 +91,11 @@ class EntityManager
 
         // fixme: необходимо обращение к колонке с первичным ключом!!!
         if (isset(self::$unitOfWork[spl_object_hash($entity)])) {
-            return (new QueryBuilder())->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
+            return $this->queryBuilder->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
         }
 
         // Присвоение идентификатора БД - сущности
-        $id = (new QueryBuilder())->insert($this->entityReader->getTableName(), $arData);
+        $id = $this->queryBuilder->insert($this->entityReader->getTableName(), $arData);
 
         $propertyReflector = new \ReflectionProperty($entity, $this->entityReader->getPrimaryProperty());
         $propertyReflector->setAccessible(true);

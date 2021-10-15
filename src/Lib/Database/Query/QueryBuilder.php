@@ -2,7 +2,7 @@
 
 namespace Lib\Database\Query;
 
-use PDO;
+use Lib\Database\Drivers\Interfaces\IConnection;
 
 /**
  * fixme: необходимо экранирование
@@ -14,11 +14,9 @@ class QueryBuilder
     protected string $mainTable = '';
 
     /**
-     * Прокинуть тип COnnection
+     * @param IConnection $dbConnection
      */
-    public function __construct()
-    {
-    }
+    public function __construct(protected IConnection $dbConnection) { }
 
     /**
      * @param string[] $fields
@@ -113,12 +111,10 @@ class QueryBuilder
             $sql = substr($sql, 0, -1);
         }
 
-        $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
-        $db->exec("SET NAMES 'utf8'; SET CHARACTER SET 'utf8'");
-        return (bool) $db->exec($sql);
+        return $this->dbConnection->exec($sql);
     }
 
-    public function insert(string $tableName, array $fieldsValues) : int|string
+    public function insert(string $tableName, array $fieldsValues) : string
     {
         $sql = sprintf('INSERT INTO %s (%s) VALUES (%s)',
             $tableName,
@@ -126,27 +122,21 @@ class QueryBuilder
             $this->prepareValues($fieldsValues)
         );
 
-        $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
-        $db->exec("SET NAMES 'utf8'; SET CHARACTER SET 'utf8'");
-        $db->exec($sql);
-
-        return $db->lastInsertId();
+        $this->dbConnection->exec($sql);
+        return (string) $this->dbConnection->getLastInsertedId();
     }
 
     /**
-     * fixme: Запрос не должен исполняться из QueryBuilder'a, он должен пробрасываться в объект IConnection
-     * TODO временно возвращает массив, будет возвращать объект выборки
      * @param bool $multipleRows
      * @return array
      */
     public function exec(bool $multipleRows = false): array
     {
-        $db = (new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root'))->query($this->sql);
+        $dbRes = $this->dbConnection->query($this->sql);
+        $this->sql = '';
 
-        if ($multipleRows) {
-            return $db->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        }
-
-        return $db->fetch(PDO::FETCH_ASSOC) ?: [];
+        return $multipleRows ?
+            $dbRes->fetchAll() :
+            $dbRes->fetch();
     }
 }

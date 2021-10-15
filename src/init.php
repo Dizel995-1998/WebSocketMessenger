@@ -3,15 +3,18 @@
 use Lib\Container\Container;
 use Lib\Crypto\Crypto;
 use Lib\Crypto\ICrypto;
+use Lib\Database\Drivers\Interfaces\IConnection;
+use Lib\Database\Drivers\PdoDriver;
 use Lib\Database\Reader\IReader;
 use Lib\Database\Reader\ReflectionReader;
 use Lib\Request\Request;
 
 $arDbConfig = [
-    'dbHost' => 'mysql',
-    'dbUser' => 'root',
-    'dbPassword' => 'root',
-    'dbName' => 'mydb'
+    'user' => 'root',
+    'password' => 'root',
+    'host' => 'mysql',
+    'dbName' => 'mydb',
+    'port' => 3306
 ];
 
 $arRequestConfig = [
@@ -22,6 +25,7 @@ $arRequestConfig = [
     'requestData' => array_merge($_SERVER, $_REQUEST)
 ];
 
+Container::setService(IConnection::class, $arDbConfig, PdoDriver::class);
 Container::setService(IReader::class, [], ReflectionReader::class);
 Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
 Container::setService(Request::class, $arRequestConfig);
