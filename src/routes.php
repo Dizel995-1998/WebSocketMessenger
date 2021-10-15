@@ -14,11 +14,11 @@ return [
 
 
     /** Пользователь */
-    (new Route('/user', 'POST', UserController::class, 'create'))
+    (new Route('/users', 'POST', UserController::class, 'create'))
         ->addMiddleware(CreateUserMiddleware::class),
 
-    (new Route('/user', 'PUT', UserController::class, 'update'))
-        ->addMiddleware(UpdateUserMiddleware::class),
+    (new Route('/user/auth', 'POST', UserController::class, 'authorizeMe'))
+        ->addMiddleware(SignInMiddleware::class)
 
     (new Route('/user/password', 'PUT', UserController::class, 'updatePassword'))
         ->addMiddleware(ChangeUserPasswordMiddleware::class)

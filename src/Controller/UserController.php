@@ -2,19 +2,44 @@
 
 namespace Controller;
 
+use Entity\AccessToken;
 use Entity\User;
 use GuzzleHttp\Psr7\Response;
 use Lib\Database\EntityManager\EntityManager;
+use Lib\Jwt\JwtToken;
 use Lib\Request\Request;
 use Lib\Response\BadRequest;
 use Lib\Response\JsonResponse;
 use Lib\Response\SuccessResponse;
 use Psr\Http\Message\ResponseInterface;
-use Rakit\Validation\Rules\Json;
 use Service\GoogleAuth\GoogleAuth;
 
 class UserController
 {
+    /**
+     * @throws BadRequest
+     */
+    public function authorizeMe(Request $request, EntityManager $entityManager, JwtToken $token) : ResponseInterface
+    {
+        $user = $entityManager->findBy(User::class, [
+            'login' => $request->get('login'),
+            'password' => $request->get('password')
+        ]);
+
+        if (!$user) {
+            throw new BadRequest('Incorrect login or password');
+        }
+
+        $token->setUserId($user->getId());
+
+        // Вносим токен в табличку активных токенов
+        $accessToken = (new AccessToken())->setToken((string) $token);
+        $entityManager->save($accessToken);
+
+        // todo: Это ещё не полноценный JWT, нет refresh токена
+        return new JsonResponse(['access_token' => (string) $token]);
+    }
+
     public function me(Request $request, EntityManager $entityManager, $id): ResponseInterface
     {
         return new SuccessResponse($entityManager->findByPrimaryKey(User::class, $id));

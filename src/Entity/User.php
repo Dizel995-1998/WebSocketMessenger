@@ -46,6 +46,13 @@ class User implements \JsonSerializable
      */
     protected ?string $password = null;
 
+    /**
+     * @ORM\StringColumn({"name":"login"})
+     * @var string
+     */
+    protected string $login;
+
+
 //    /**
 //     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
 //     * @var
@@ -91,7 +98,16 @@ class User implements \JsonSerializable
         return $this->status;
     }
 
+    public function setLogin(string $login) : self
+    {
+        $this->login = $login;
+        return $this;
+    }
 
+    public function getLogin() : string
+    {
+        return $this->login;
+    }
 
     public function getName() : ?string
     {
