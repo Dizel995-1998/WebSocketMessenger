@@ -40,6 +40,12 @@ class User implements \JsonSerializable
      */
     protected ?string $status = null;
 
+    /**
+     * @ORM\StringColumn({"name":"password_hash"})
+     * @var string|null
+     */
+    protected ?string $password = null;
+
 //    /**
 //     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
 //     * @var
@@ -102,6 +108,14 @@ class User implements \JsonSerializable
         return new LazyCollection(
             new OneToMany('ID', 'users', 'USER_ID', 'pictures', User::class, Picture::class)
         );
+    }
+
+    public function setPassword(string $password) : self
+    {
+        // fixme: вызвать сервис провайдер и получить сервис хеширования
+        // todo: или применить observer и сервис слушателей
+        $this->password = $password;
+        return $this;
     }
 
     public function jsonSerialize()
