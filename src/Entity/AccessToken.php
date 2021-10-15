@@ -34,6 +34,11 @@ class AccessToken
         return $this->userId;
     }
 
+    public function getId() : ?int
+    {
+        return $this->id;
+    }
+
     /**
      * @param int $userId
      * @return $this
