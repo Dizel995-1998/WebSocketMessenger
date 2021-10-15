@@ -10,6 +10,7 @@ use Lib\Response\BadRequest;
 use Lib\Response\JsonResponse;
 use Lib\Response\SuccessResponse;
 use Psr\Http\Message\ResponseInterface;
+use Rakit\Validation\Rules\Json;
 use Service\GoogleAuth\GoogleAuth;
 
 class UserController
@@ -46,8 +47,21 @@ class UserController
         return new JsonResponse($user);
     }
 
+    public function createUser(Request $request, EntityManager $entityManager) : ResponseInterface
+    {
+        $user = (new User())
+            ->setName($request->get('name'))
+            ->setStatus($request->get('status'))
+            ->setPictureUrl('');
+
+        return new JsonResponse($entityManager->save($user));
+    }
+
     public function test(EntityManager $entityManager)
     {
-        return new JsonResponse($entityManager->findBy(User::class, 'externalId', 1));
+        $user = (new User())->setName('Шамиль');
+        $entityManager->save($user);
+
+        return new JsonResponse($user);
     }
 }
