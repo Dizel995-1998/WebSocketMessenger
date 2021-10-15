@@ -111,6 +111,7 @@ class QueryBuilder
         }
 
         $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
+        $db->exec("SET NAMES 'utf8'; SET CHARACTER SET 'utf8'");
         return (bool) $db->exec($sql);
     }
 
@@ -123,6 +124,7 @@ class QueryBuilder
         );
 
         $db = new PDO('mysql:host=mysql;dbname=mydb', 'root', 'root');
+        $db->exec("SET NAMES 'utf8'; SET CHARACTER SET 'utf8'");
         $db->exec($sql);
 
         return $db->lastInsertId();
