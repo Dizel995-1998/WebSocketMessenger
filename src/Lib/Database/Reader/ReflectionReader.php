@@ -126,9 +126,20 @@ class ReflectionReader implements IReader
         return [];
     }
 
+    /**
+     * Чистит данные от предыдущей сущности
+     */
+    protected function cleanData() : void
+    {
+        $this->properties = [];
+        $this->primaryKeyProperty = null;
+        $this->primaryKeyProperty = null;
+    }
+
     public function readEntity(string $entityClassName): self
     {
         $this->entityClassName = $entityClassName;
+        $this->cleanData();
         $this->parse();
         return $this;
     }
