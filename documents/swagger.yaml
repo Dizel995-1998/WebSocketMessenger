@@ -1,0 +1,31 @@
+swagger: "2.0"
+info:
+  title: "Проект чата"
+  description: "REST API для взаимодействия с backend'ом чата"
+  version: "3.0.0"
+  contact:
+    email: "shomaman123@gmail.com"
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+basePath: "/api"
+schemes:
+  - http
+  - https
+
+security:
+  - sessionid: []
+
+paths:
+  /user:
+    get:
+      summary: Работа с сущностью пользователя
+      responses:
+        "200":
+          description: "Успешно"
+          schema:
+            type: array
+
+      tags:
+        - Пользователь
+
