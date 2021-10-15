@@ -6,6 +6,7 @@ use Throwable;
 
 abstract class HttpErrorException extends \Exception
 {
+    protected string $error;
     /**
      * @param string|array $message
      * @param int $code
@@ -13,7 +14,13 @@ abstract class HttpErrorException extends \Exception
      */
     public function __construct($message = "", $code = 0, Throwable $previous = null)
     {
-        parent::__construct(is_array($message) ? serialize($message) : $message, $code, $previous);
+        $this->error = is_array($message) ? serialize($message) : $message;
+        parent::__construct($this->error, $code, $previous);
+    }
+
+    public function getHttpError() : string|array
+    {
+        return unserialize($this->error) ?: $this->error;
     }
 
     /**
