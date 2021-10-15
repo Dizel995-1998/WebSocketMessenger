@@ -2,6 +2,8 @@
 
 namespace Entity;
 
+use Lib\Database\Column as ORM;
+
 /**
  * todo: хорошо бы добавить поле TTL, чтобы агентом удалять старые токены
  * @ORM\Table({"name":"access_tokens"})
@@ -9,7 +11,7 @@ namespace Entity;
 class AccessToken
 {
     /**
-     * @ORM\IntegerColumn({"name":"id"})
+     * @ORM\PrimaryKey ({"name":"id"})
      * @var int|null
      */
     protected ?int $id = null;
