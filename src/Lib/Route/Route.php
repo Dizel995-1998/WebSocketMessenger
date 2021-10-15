@@ -142,7 +142,7 @@ class Route implements IRoute
             return new JsonResponse(['error' => true, 'code' => unserialize($e->getMessage()) ?: $e->getMessage()], $e->getHttpErrorCode());
         } catch (Throwable $e) {
             // какая то внутренняя ошибка, или ошибка из сторонних пакетов
-            return new JsonResponse(['error' => true, 'code' => $e->getMessage()], 500);
+            return new JsonResponse(['error' => true, 'code' => $e->getMessage(), 'trace' => $e->getTrace()], 500);
         }
     }
 
