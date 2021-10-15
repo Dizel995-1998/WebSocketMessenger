@@ -88,7 +88,7 @@ class EntityManager
             }
         }
 
-        // fixme: hardCode getId method, must be part of interface
+        // fixme: необходимо обращение к колонке с первичным ключом!!!
         if (isset(self::$unitOfWork[spl_object_hash($entity)])) {
             return (new QueryBuilder())->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
         }
