@@ -19,7 +19,7 @@ $arRequestConfig = [
     'uri' => $_SERVER['REQUEST_URI'],
     'headers' => getallheaders(),
     'body' => file_get_contents('php://input'),
-    'requestData' => $_REQUEST
+    'requestData' => array_merge($_SERVER, $_REQUEST)
 ];
 
 Container::setService(IReader::class, [], ReflectionReader::class);
