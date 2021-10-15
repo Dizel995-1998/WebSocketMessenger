@@ -44,7 +44,7 @@ class ReflectionReader implements IReader
 
     protected function getColumnName(string $phpDoc, ?string $defaultColumn = null) : string
     {
-        $regexPattern = '~ORM\\S+(?<json>({(.*)}))~';
+        $regexPattern = '~ORM\\D+(?<json>({(.*)}))~';
 
         if (!preg_match($regexPattern, $phpDoc, $matches)) {
             throw new \InvalidArgumentException('Column was dont found in phpDoc');
