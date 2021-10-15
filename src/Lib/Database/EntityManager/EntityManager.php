@@ -40,7 +40,10 @@ class EntityManager
 
         $entity = Hydrator::getEntity($this->entityReader, $dbData);
 
-        self::$unitOfWork[spl_object_hash($entity)] = $entity;
+        if (isset($entity)) {
+            self::$unitOfWork[spl_object_hash($entity)] = $entity;
+        }
+
         return $entity;
     }
 
@@ -74,7 +77,9 @@ class EntityManager
                 throw new \RuntimeException(sprintf('Сущность "%s" имеет не инициализированное свойство: "%s"', get_class($entity), $propertyName));
             }
 
-            $arData[$columnName] = $propertyReflector->getValue($entity);
+            if ($propValue = $propertyReflector->getValue($entity)) {
+                $arData[$columnName] = $propValue;
+            }
         }
 
         // fixme: hardCode getId method, must be part of interface
