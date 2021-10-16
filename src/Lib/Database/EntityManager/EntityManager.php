@@ -37,7 +37,7 @@ class EntityManager
         return $object;
     }
 
-    public function findBy(string $entityClassName, array $whereCondition) : ?object
+    public function findBy(string $entityClassName, array $whereCondition, ?int $limit = null) : ?object
     {
         if (!class_exists($entityClassName)) {
             throw new InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
@@ -57,6 +57,7 @@ class EntityManager
                 ->select(['*'])
                 ->from($this->entityReader->getTableName())
                 ->where($preparedCondition)
+                ->limit($limit)
                 ->exec();
 
         if (!$dbData) {

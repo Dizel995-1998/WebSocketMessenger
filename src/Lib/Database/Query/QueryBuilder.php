@@ -71,6 +71,26 @@ class QueryBuilder
         return $this;
     }
 
+    /**
+     * @param int $offset
+     * @return $this
+     */
+    public function offset(int $offset) : self
+    {
+        $this->sql .= ' OFFSET = ' . $offset;
+        return $this;
+    }
+
+    /**
+     * @param int|null $limit
+     * @return $this
+     */
+    public function limit(?int $limit = null) : self
+    {
+        $limit && $this->sql .= ' LIMIT ' . $limit;
+        return $this;
+    }
+
     protected function escapeExpression($expression) : int|string
     {
         return is_numeric($expression) ? $expression : "'$expression'";
