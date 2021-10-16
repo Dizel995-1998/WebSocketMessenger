@@ -220,6 +220,7 @@ class ReflectionReader implements IReader
     protected function cleanData() : void
     {
         $this->properties = [];
+        $this->relations = [];
         $this->primaryKeyProperty = null;
         $this->primaryKeyProperty = null;
     }
