@@ -3,6 +3,7 @@
 namespace Lib\Database\Drivers;
 
 
+use Lib\Database\Drivers\Exceptions\CannotConnectToDataBase;
 use Lib\Database\Drivers\Interfaces\IConnection;
 use PDO;
 
@@ -20,14 +21,21 @@ class PdoDriver implements IConnection
 
     }
 
+    /**
+     * @throws CannotConnectToDataBase
+     */
     protected function getConnection() : PDO
     {
         static $connection;
 
-        // fixme: обернуть исключения PDO в свои
         if (!isset($connection)) {
-            $conn = sprintf('%s:host=%s;dbname=%s', self::DB_SQL_TYPE, $this->host, $this->dbName);
-            $connection = new PDO($conn, $this->user, $this->password);
+            try {
+                $conn = sprintf('%s:host=%s;dbname=%s', self::DB_SQL_TYPE, $this->host, $this->dbName);
+                $connection = new PDO($conn, $this->user, $this->password);
+                $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            } catch (\PDOException $PDOException) {
+                throw new CannotConnectToDataBase($PDOException->getMessage());
+            }
         }
 
         return $connection;
@@ -35,11 +43,13 @@ class PdoDriver implements IConnection
 
     public function exec(string $sql): bool
     {
+        // todo: обернуть исключения PDO в свои
         return (bool) $this->getConnection()->exec($sql);
     }
 
     public function query(string $sql): DbResult
     {
+        // todo: обернуть исключения PDO в свои
         $db = $this->getConnection()->query($sql);
 
         return $db ?
