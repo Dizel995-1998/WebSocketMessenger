@@ -87,9 +87,9 @@ class EntityManager
         $this->entityReader->readEntity(get_class($entity));
         $arData = [];
 
-        foreach ($this->entityReader->getProperties() as $propertyName => $columnName) {
-            // fixme: hardcode
-            if ($propertyName == 'id') {
+        foreach ($this->entityReader->getProperties() as $propertyName => $column) {
+            // todo: В данной реализации PK может быть только автоинкрементом, нужно ввести новый параметр в BaseColumn, isAutoIncrement
+            if ($column->isPrimaryKey()) {
                 continue;
             }
 
@@ -105,7 +105,7 @@ class EntityManager
             }
 
             if ($propValue = $propertyReflector->getValue($entity)) {
-                $arData[$columnName->getName()] = $propValue;
+                $arData[$column->getName()] = $propValue;
             }
         }
 

@@ -34,11 +34,10 @@ class Hydrator
                 $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
 
-                // fixme: вызов свойства первичного ключа
-                $propPrimaryKey = $reflectionClass->getProperty('id');
+                // Для выборке только по нашей сущности WHERE ...
+                $propPrimaryKey = $reflectionClass->getProperty($metaData->getPrimaryProperty());
                 $propPrimaryKey->setAccessible(true);
-
-                $columnExpression = $metaData->getColumnNameByProperty('id')->getName();
+                $columnExpression = $metaData->getColumnNameByProperty($metaData->getPrimaryProperty())->getName();
 
                 $whereCondition = [$metaData->getTableName() . '.' . $columnExpression => $propPrimaryKey->getValue($ormEntity)];
                 $propertyReflector->setValue($ormEntity, new LazyCollection($relation, $whereCondition));

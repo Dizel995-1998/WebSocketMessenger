@@ -69,11 +69,14 @@ class ReflectionReader implements IReader
 
         // провалидировать JSON на минимально необходимые поля
 
-        $nameSpace = '\\Lib\\Database\\Column\\';
+        $nameSpace = 'Lib\\Database\\Column\\';
 
         // todo: если нет ключа name, можно использовать camelCase от названия свойства explodeCamelCase method
 
-        return (new ($nameSpace . $matches['column'])($jsonDecode['name'], true));
+        $columnClassName = $nameSpace . $matches['column'];
+        $isPK = $columnClassName == PrimaryKey::class;
+
+        return (new ($columnClassName)($jsonDecode['name'], $jsonDecode['nullable'] ?: false, $isPK, $jsonDecode['default_value'] ?: null));
     }
 
     /**
