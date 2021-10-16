@@ -5,64 +5,18 @@ namespace Lib\Database\Column;
 abstract class BaseColumn
 {
     /**
-     * @var string
-     */
-    protected string $columnName;
-
-    /**
-     * @var bool
-     */
-    protected bool $isPrimaryKey = false;
-
-    /**
-     * @var bool
-     */
-    protected bool $isNullable;
-
-    /**
-     * @var string
-     */
-    protected string $tableName;
-
-    /**
-     * @var string
-     */
-    protected string $entityClassName;
-
-    /**
-     * @var mixed
-     */
-    protected $defaultValue;
-
-    /**
-     * @param string $columnName
-     * @param string $tableName
-     * @param string $entityClassName
+     * @param string $name
      * @param bool $isNullable
+     * @param bool $isPrimaryKey
      * @param null $defaultValue
      */
     public function __construct(
-        string $columnName,
-        string $tableName,
-        string $entityClassName,
-        bool $isNullable = true,
-        $defaultValue = null
+        protected string $name,
+        protected bool $isNullable = true,
+        protected bool $isPrimaryKey = false,
+        protected $defaultValue = null
     ) {
-        $this->entityClassName = $entityClassName;
-        $this->columnName = $columnName;
-        $this->isNullable = $isNullable;
-        $this->tableName = $tableName;
-        $this->defaultValue = $defaultValue;
-    }
 
-    public function getEntityClassName() : string
-    {
-        return $this->entityClassName;
-    }
-
-    public function getTableName() : string
-    {
-        return $this->tableName;
     }
 
     public function isPrimaryKey(): bool
@@ -77,7 +31,7 @@ abstract class BaseColumn
 
     public function getName(): string
     {
-        return $this->columnName;
+        return $this->name;
     }
 
     // todo: вернуть что за тип, тот который в БД?

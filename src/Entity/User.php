@@ -2,17 +2,20 @@
 
 namespace Entity;
 
-use Lib\Database\Collection\LazyCollection;
 use Lib\Database\Relations\OneToMany;
-use Lib\Database\Column as ORM;
+use Lib\Database\Relations\OneToOne;
+use Lib\Database\Column\PrimaryKey;
+use Lib\Database\Column\IntegerColumn;
+use Lib\Database\Column\StringColumn;
+
 
 /**
- * @ORM\Table({"name":"users"})
+ * @Table({"name":"users"})
  */
 class User implements \JsonSerializable
 {
     /**
-     * @ORM\PrimaryKey({"name":"id"})
+     * @PrimaryKey({"name":"id"})
      * @var int|null
      */
     protected ?int $id = null;
@@ -24,41 +27,40 @@ class User implements \JsonSerializable
     protected string $name;
 
     /**
-     * @ORM\StringColumn({"name":"external_id"})
+     * @StringColumn({"name":"external_id"})
      * @var null|string
      */
     protected ?string $externalId = null;
 
     /**
-     * @ORM\StringColumn({"name":"picture_url"})
+     * @StringColumn({"name":"picture_url"})
      * @var null|string
      */
     protected ?string $pictureUrl = null;
 
     /**
-     * @ORM\StringColumn({"name":"status"})
+     * @StringColumn({"name":"status"})
      * @var null|string
      */
     protected ?string $status = null;
 
     /**
-     * @ORM\StringColumn({"name":"password_hash"})
+     * @StringColumn({"name":"password_hash"})
      * @var string|null
      */
     protected ?string $password = null;
 
     /**
-     * @ORM\StringColumn({"name":"login"})
+     * @StringColumn({"name":"login"})
      * @var string
      */
     protected string $login;
 
-
-//    /**
-//     * @ORM\OneToMany({"sourceColumn":"ID", "sourceTable":"users", "targetColumn":"user_id", "targetTable":"pictures", "targetClassName":"Picture"})
-//     * @var
-//     */
-//    protected $pictures;
+    /**
+     * @OneToOne({"targetEntity"="Picture", "mappedBy"="id"})
+     * @var
+     */
+    protected $picture;
 
     public function setName(string $name) : self
     {
@@ -122,9 +124,7 @@ class User implements \JsonSerializable
 
     public function getPictures()
     {
-        return new LazyCollection(
-            new OneToMany('ID', 'users', 'USER_ID', 'pictures', User::class, Picture::class)
-        );
+        return $this->pictures;
     }
 
     public function setPassword(string $password) : self

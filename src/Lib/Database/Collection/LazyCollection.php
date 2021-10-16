@@ -16,7 +16,12 @@ class LazyCollection implements IteratorAggregate
      * Получаем обьект отношения, чтобы в getIterator построить SELECT запрос на выборку связанной сущности
      * @param BaseRelation $relation
      */
-    public function __construct(protected BaseRelation $relation) {}
+    public function __construct(
+        protected BaseRelation $relation,
+        protected array $where = []
+    ) {
+
+    }
 
     public function getIterator()
     {
@@ -29,13 +34,13 @@ class LazyCollection implements IteratorAggregate
             ->select(['*'])
             ->from($this->relation->getSourceTable())
             ->join($this->relation->getSourceColumn(), $this->relation->getTargetColumn(), $this->relation->getTargetTable())
-            ->where([$this->relation->getSourceTable() . '.ID' => 2]) // fixme: в отношениях не продумана логика условий where
+            ->where($this->where)
             ->exec(true);
 
         $arIterable = [];
 
         foreach ($dataCollection as $item) {
-            $arIterable[] = Hydrator::getEntity(new ReflectionReader($this->relation->getTargetEntity()), $item);
+            $arIterable[] = Hydrator::getEntity(new ReflectionReader(), $item);
         }
 
         return new \ArrayIterator($arIterable);

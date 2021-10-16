@@ -1,19 +1,23 @@
 <?php
 
-namespace Lib\Database\Reader;
+namespace Lib\Database\Reader\ReflectionReader;
 
+use Lib\Database\Column\BaseColumn;
 use Lib\Database\Column\IntegerColumn;
 use Lib\Database\Column\PrimaryKey;
 use Lib\Database\Column\StringColumn;
+use Lib\Database\Reader\IReader;
+use Lib\Database\Relations\BaseRelation;
+use Lib\Database\Relations\OneToMany;
+use Lib\Database\Relations\OneToOne;
 use ReflectionProperty;
 
 class ReflectionReader implements IReader
 {
-    const DOC_COMMENT_PREFIX = 'ORM';
-    const DOC_TABLE_NAME = 'Table';
-
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
-    const ALLOW_COLUMN_TYPES = [IntegerColumn::class, StringColumn::class, PrimaryKey::class];
+
+    const PROPERTIES_TYPES = [IntegerColumn::class, StringColumn::class, PrimaryKey::class];
+    const RELATIONS_TYPES = [OneToOne::class, OneToMany::class];
 
     protected string $entityClassName;
     protected string $tableName;
@@ -23,58 +27,87 @@ class ReflectionReader implements IReader
 
     /**
      * Возвращает название класса без namespace
-     * @param string $className
-     * @return string
+     * @param array $classNames
+     * @return array
      * @throws \ReflectionException
      */
-    protected function getShortClassName(string $className) : string
+    protected function getShortClassNames(array $classNames = []) : array
     {
-        return (new \ReflectionClass($className))->getShortName();
+        $res = [];
+
+        foreach ($classNames as $className) {
+            $res[] = (new \ReflectionClass($className))->getShortName();
+        }
+
+        return $res;
+    }
+
+
+    /**
+     * @param string $phpDoc
+     * @return BaseColumn|null
+     * @throws \ReflectionException
+     */
+    protected function getColumn(string $phpDoc) : ?BaseColumn
+    {
+        $regexPattern = '/' . '(?<column>' . implode('|', $this->getShortClassNames(self::PROPERTIES_TYPES)) . ') ?\((?<json>.+)\)/';
+
+        if (!preg_match($regexPattern, $phpDoc, $matches)) {
+            return null;
+        }
+
+        if (!$jsonDecode = json_decode($matches['json'], true)) {
+            throw new \InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
+        }
+
+        // провалидировать JSON на минимально необходимые поля
+
+//        protected string $name,
+//        protected bool $isNullable = true,
+//        protected bool $isPrimaryKey = false,
+//        protected $defaultValue = null
+
+        $nameSpace = '\\Lib\\Database\\Column\\';
+
+        return (new ($nameSpace . $matches['column'])($jsonDecode['name'], true));
     }
 
     protected function parse() : void
     {
         $reflectionClass = new \ReflectionClass($this->entityClassName);
 
-        if (!$this->tableName = $this->extractTableNameFromDoc((string) $reflectionClass->getDocComment())) {
-            throw new \InvalidArgumentException(sprintf('Entity "%s" does not table name in php doc', $this->entityClassName));
+        $this->tableName = strtolower($reflectionClass->getShortName()) . 's';
+
+        if ($this->tableName == 'accesstokens') {
+            $this->tableName = 'access_tokens';
         }
 
+//        if (!$this->tableName = $this->extractTableNameFromDoc((string) $reflectionClass->getDocComment())) {
+//            throw new \InvalidArgumentException(sprintf('Entity "%s" does not table name in php doc', $this->entityClassName));
+//        }
+
         foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
-            if (!$this->isValidOrmDoc((string) $reflectionProperty->getDocComment())) {
+
+            if (!$column = $this->getColumn($reflectionProperty->getDocComment())) {
                 continue;
             }
 
-            if ($columnName = $this->getDataByPhpTag($reflectionProperty->getDocComment(), [$this->getShortClassName(PrimaryKey::class)])) {
-                $this->primaryKeyProperty = $reflectionProperty->getName();
-                $this->primaryKeyColumn = $columnName;
-            }
-
-            /** Процедура избавления названий классов от namespace, чтобы в будущем замапиться на ORM объекты типов */
-            // fixme: сделано черезчур громоздко
-            $allowOrmTypes = [];
-
-            foreach (self::ALLOW_COLUMN_TYPES as $allowType) {
-                $allowOrmTypes[] = $this->getShortClassName($allowType);
-            }
-
-            /*** Название свойства -> Название колонки */
-            $this->properties[$reflectionProperty->getName()] = $this->getDataByPhpTag($reflectionProperty->getDocComment(), $allowOrmTypes);
+            $this->properties[$reflectionProperty->getName()] = $column;
         }
 
-        if (!$this->primaryKeyProperty) {
-            throw new \RuntimeException(sprintf('У сущности "%s" отсутствует первичный ключ', $this->entityClassName));
-        }
+//        if (!$this->primaryKeyProperty) {
+//            throw new \RuntimeException(sprintf('У сущности "%s" отсутствует первичный ключ', $this->entityClassName));
+//        }
     }
 
     protected function extractTableNameFromDoc(string $phpDoc) : ?string
     {
-        return $this->getDataByPhpTag($phpDoc, [self::DOC_TABLE_NAME]);
+        return $this->getDataByPhpTag($phpDoc, ['Table']);
     }
 
     protected function getDataByPhpTag(string $phpDoc, array $allowTypes) : ?string
     {
-        $regexPattern = '/' . self::DOC_COMMENT_PREFIX . '\\\(?<column>' . implode('|', $allowTypes) . ') ?\((?<json>.+)\)/';
+        $regexPattern = '/' . '(?<column>' . implode('|', $allowTypes) . ') ?\((?<json>.+)\)/';
 
         if (!preg_match($regexPattern, $phpDoc, $matches)) {
             return null;
@@ -91,13 +124,9 @@ class ReflectionReader implements IReader
         return $jsonDecode['name'] ?: $jsonDecode['NAME'];
     }
 
-    protected function isValidOrmDoc(string $phpDoc) : bool
-    {
-        return str_contains($phpDoc, self::DOC_COMMENT_PREFIX);
-    }
-
     public function getPrimaryKey(): ?string
     {
+        return 'id';
         return $this->primaryKeyColumn;
     }
 
@@ -121,7 +150,7 @@ class ReflectionReader implements IReader
         return array_values($this->properties);
     }
 
-    public function getColumnNameByProperty(string $propertyName): ?string
+    public function getColumnNameByProperty(string $propertyName): ?BaseColumn
     {
         return $this->properties[$propertyName];
     }

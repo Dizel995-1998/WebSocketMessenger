@@ -19,13 +19,13 @@ class Hydrator
             /** Если свойство не nullable типа, а в БД нет для него данных */
             if ($propertyReflector->getType()
                 && !$propertyReflector->getType()->allowsNull()
-                && empty($dbData[$columnName])
+                && empty($dbData[$columnName->getName()])
             ) {
                 throw new \RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $metaData->getEntityName()));
             }
 
             $propertyReflector->setAccessible(true);
-            $propertyReflector->setValue($ormEntity, $dbData[$columnName] ?? null);
+            $propertyReflector->setValue($ormEntity, $dbData[$columnName->getName()] ?? null);
         }
 
         if ($associations = $metaData->getRelations()) {

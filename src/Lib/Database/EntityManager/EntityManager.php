@@ -31,7 +31,7 @@ class EntityManager
         $preparedCondition = [];
 
         foreach ($whereCondition as $propName => $propValue) {
-            $preparedCondition[$this->entityReader->getColumnNameByProperty($propName)] = $propValue;
+            $preparedCondition[$this->entityReader->getColumnNameByProperty($propName)->getName()] = $propValue;
         }
 
         $dbData =
@@ -85,7 +85,7 @@ class EntityManager
             }
 
             if ($propValue = $propertyReflector->getValue($entity)) {
-                $arData[$columnName] = $propValue;
+                $arData[$columnName->getName()] = $propValue;
             }
         }
 

@@ -6,7 +6,7 @@ use Lib\Crypto\ICrypto;
 use Lib\Database\Drivers\Interfaces\IConnection;
 use Lib\Database\Drivers\PdoDriver;
 use Lib\Database\Reader\IReader;
-use Lib\Database\Reader\ReflectionReader;
+use Lib\Database\Reader\ReflectionReader\ReflectionReader;
 use Lib\Request\Request;
 
 $arDbConfig = [

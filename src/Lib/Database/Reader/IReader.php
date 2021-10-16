@@ -2,6 +2,7 @@
 
 namespace Lib\Database\Reader;
 
+use Lib\Database\Column\BaseColumn;
 use Lib\Database\Relations\BaseRelation;
 
 interface IReader
@@ -17,7 +18,7 @@ interface IReader
     public function getTableName() : string;
 
     /**
-     * @return <string, string> (PropertyName => ColumnName)
+     * @return <string, BaseColumn> (PropertyName => BaseColumn)
      */
     public function getProperties() : array;
 
@@ -30,7 +31,7 @@ interface IReader
      * @param string $propertyName
      * @return string|null
      */
-    public function getColumnNameByProperty(string $propertyName) : ?string;
+    public function getColumnNameByProperty(string $propertyName) : ?BaseColumn;
 
     /**
      * @param string $columnName
