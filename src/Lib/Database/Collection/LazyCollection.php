@@ -13,6 +13,9 @@ use Lib\Database\Relations\BaseRelation;
 
 class LazyCollection implements IteratorAggregate
 {
+    protected bool $initialized = false;
+    protected array $elements = [];
+
     /**
      * Получаем обьект отношения, чтобы в getIterator построить SELECT запрос на выборку связанной сущности
      * @param BaseRelation $relation
@@ -25,30 +28,34 @@ class LazyCollection implements IteratorAggregate
 
     }
 
-    public function getIterator()
+    public function getAll() : array
     {
-        /**
-         * @var QueryBuilder
-         */
-        $queryBuilder = Container::getService(QueryBuilder::class);
+        if (!$this->initialized) {
+            $queryBuilder = Container::getService(QueryBuilder::class);
+            $dataCollection = $queryBuilder
+                ->select(['*'])
+                ->from($this->relation->getSourceTable())
+                ->join($this->relation->getSourceColumn(), $this->relation->getTargetColumn(), $this->relation->getTargetTable())
+                ->where($this->where)
+                ->exec(true);
 
-        $dataCollection = $queryBuilder
-            ->select(['*'])
-            ->from($this->relation->getSourceTable())
-            ->join($this->relation->getSourceColumn(), $this->relation->getTargetColumn(), $this->relation->getTargetTable())
-            ->where($this->where)
-            ->exec(true);
+            foreach ($dataCollection as $item) {
+                // fixme: какое то говно, придумать красивый механизм получения названия сущности по таблице
+                $reader = Container::getService(IReader::class);
+                $entityRelationName = $reader::class::getEntityClassNameByTable($this->relation->getTargetTable());
+                $reader->readEntity($entityRelationName);
 
-        $arIterable = [];
+                $this->elements[] = Hydrator::getEntity($reader, $item);
+            }
 
-        foreach ($dataCollection as $item) {
-            // fixme: какое то говно, придумать красивый механизм получения названия сущности по таблице
-            $reader = Container::getService(IReader::class);
-            $entityRelationName = $reader::class::getEntityClassNameByTable($this->relation->getTargetTable());
-            $reader->readEntity($entityRelationName);
-            $arIterable[] = Hydrator::getEntity($reader, $item);
+            $this->initialized = true;
         }
 
-        return new \ArrayIterator($arIterable);
+        return $this->elements;
+    }
+
+    public function getIterator()
+    {
+        return new \ArrayIterator($this->getAll());
     }
 }
