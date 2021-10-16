@@ -33,6 +33,7 @@ class PdoDriver implements IConnection
                 $conn = sprintf('%s:host=%s;dbname=%s', self::DB_SQL_TYPE, $this->host, $this->dbName);
                 $connection = new PDO($conn, $this->user, $this->password);
                 $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $connection->query("set names 'utf8'");
             } catch (\PDOException $PDOException) {
                 throw new CannotConnectToDataBase($PDOException->getMessage());
             }
