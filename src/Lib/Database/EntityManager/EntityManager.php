@@ -22,6 +22,21 @@ class EntityManager
 
     }
 
+    public function findOrFailBy(string $entityClassName, array $whereCondition) : object
+    {
+        if (!$object = $this->findBy($entityClassName, $whereCondition)) {
+            $filter = '';
+
+            foreach ($whereCondition as $filterKey => $filterValue) {
+                $filter .=  ' ' . $filterKey . ' = ' . $filterValue;
+            }
+
+            throw new RuntimeException(sprintf('Cannot find %s, with condition %s', $entityClassName, $filter));
+        }
+
+        return $object;
+    }
+
     public function findBy(string $entityClassName, array $whereCondition) : ?object
     {
         if (!class_exists($entityClassName)) {
