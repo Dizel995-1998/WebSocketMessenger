@@ -16,6 +16,7 @@ class LazyCollection implements IteratorAggregate
     /**
      * Получаем обьект отношения, чтобы в getIterator построить SELECT запрос на выборку связанной сущности
      * @param BaseRelation $relation
+     * @param array $where
      */
     public function __construct(
         protected BaseRelation $relation,
@@ -41,6 +42,7 @@ class LazyCollection implements IteratorAggregate
         $arIterable = [];
 
         foreach ($dataCollection as $item) {
+            // fixme: какое то говно, придумать красивый механизм получения названия сущности по таблице
             $reader = Container::getService(IReader::class);
             $entityRelationName = $reader::class::getEntityClassNameByTable($this->relation->getTargetTable());
             $reader->readEntity($entityRelationName);
