@@ -110,9 +110,16 @@ class EntityManager
             }
         }
 
-        // fixme: необходимо обращение к колонке с первичным ключом!!!
+        /** Если это запись "поднятая" из БД, производим UPDATE операцию */
         if (isset(self::$unitOfWork[spl_object_hash($entity)])) {
-            return $this->queryBuilder->update($this->entityReader->getTableName(), $arData, [$this->entityReader->getPrimaryKey() => $entity->getId()]);
+            $propPk = new ReflectionProperty($entity, $this->entityReader->getPrimaryProperty());
+            $propPk->setAccessible(true);
+
+            return $this->queryBuilder->update(
+                $this->entityReader->getTableName(),
+                $arData,
+                [$this->entityReader->getPrimaryColumn() => $propPk->getValue($entity)]
+            );
         }
 
         // Присвоение идентификатора БД - сущности
