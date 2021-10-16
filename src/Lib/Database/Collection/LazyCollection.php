@@ -7,6 +7,7 @@ use Lib\Container\Container;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
 use Lib\Database\Reader\ArrayReader;
+use Lib\Database\Reader\IReader;
 use Lib\Database\Reader\ReflectionReader;
 use Lib\Database\Relations\BaseRelation;
 
@@ -40,7 +41,10 @@ class LazyCollection implements IteratorAggregate
         $arIterable = [];
 
         foreach ($dataCollection as $item) {
-            $arIterable[] = Hydrator::getEntity(new ReflectionReader(), $item);
+            $reader = Container::getService(IReader::class);
+            $entityRelationName = $reader::class::getEntityClassNameByTable($this->relation->getTargetTable());
+            $reader->readEntity($entityRelationName);
+            $arIterable[] = Hydrator::getEntity($reader, $item);
         }
 
         return new \ArrayIterator($arIterable);

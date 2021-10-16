@@ -5,55 +5,65 @@ namespace Entity;
 /**
  * @ORM\Table({"name":"pictures"})
  */
-class Picture
+class Picture implements \JsonSerializable
 {
     /**
-     * @ORM\IntegerColumn({"name":"ID"})
+     * @IntegerColumn({"name":"id"})
      * @var
      */
     protected $id;
 
     /**
-     * @ORM\IntegerColumn({"name":"USER_ID"})
+     * @StringColumn({"name":"file_name"})
      * @var string
      */
-    protected $file_id;
+    protected $fileName;
 
     /**
-     * @ORM\StringColumn({"name":"FILE_NAME"})
+     * @StringColumn ({"name":"sub_dir"})
      * @var string
      */
-    protected $path;
+    protected $subDir;
 
-    /**
-     * @StringColumn({"name":"MIME_TYPE"})
-     * @var string
-     */
-    protected $mime_type;
 
-    /**
-     * @StringColumn({"name":"EXTENSION"})
-     * @var string
-     */
-    protected $extension;
-
-    public function getPath(): string
+    public function getId() : ?int
     {
-        return $this->path;
+        return $this->id;
     }
 
-    public function getMimeType(): string
+    public function getFileName() : ?string
     {
-        return $this->mime_type;
+        return $this->fileName;
     }
 
-    public function getFileId()
+    public function getSubDir() : ?string
     {
-        return $this->file_id;
+        return $this->subDir;
     }
 
-    public function getExtension(): string
+    public function setSubDir(string $subDir) : self
     {
-        return $this->extension;
+        $this->subDir = $subDir;
+        return $this;
+    }
+
+    public function setFileName(string $fileName) : self
+    {
+        $this->fileName = $fileName;
+        return $this;
+    }
+
+    public function jsonSerialize()
+    {
+        $res = [];
+
+        $reflection = new \ReflectionClass(static::class);
+
+        foreach ($reflection->getProperties(\ReflectionProperty::IS_PROTECTED) as $property) {
+            $property->setAccessible(true);
+            $res[$property->getName()] = $property->getValue($this);
+        }
+
+        return $res;
     }
 }

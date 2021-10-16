@@ -57,10 +57,15 @@ class User implements \JsonSerializable
     protected string $login;
 
     /**
-     * @OneToOne({"targetEntity"="Picture", "mappedBy"="id"})
+     * @OneToOne({"name":"picture_id", "targetEntity":"Picture", "mappedBy":"id"})
      * @var
      */
     protected $picture;
+
+    public function getPicture()
+    {
+        return $this->picture;
+    }
 
     public function setName(string $name) : self
     {

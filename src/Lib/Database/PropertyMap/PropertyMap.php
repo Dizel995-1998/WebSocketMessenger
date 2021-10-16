@@ -11,40 +11,23 @@ use Lib\Database\Relations\BaseRelation;
  */
 class PropertyMap
 {
-    protected Property $property;
+    protected string $propertyName;
 
-    protected ?BaseColumn $column = null;
+    protected string $columnName;
 
-    protected ?BaseRelation $relation = null;
-
-    public function __construct(Property $property, BaseColumn $column = null)
+    public function __construct(string $propertyName, string $columnName)
     {
-        $this->property = $property;
-        $this->column = $column;
+        $this->propertyName = $propertyName;
+        $this->columnName = $columnName;
     }
 
-    public function setRelation(BaseRelation $relation)
+    public function getPropertyName(): string
     {
-        $this->relation = $relation;
+        return $this->propertyName;
     }
 
-    public function getRelation(): BaseRelation
+    public function getColumnName(): string
     {
-        return $this->relation;
-    }
-
-    public function isRelation(): bool
-    {
-        return isset($this->relation);
-    }
-
-    public function getProperty(): Property
-    {
-        return $this->property;
-    }
-
-    public function getColumn(): BaseColumn
-    {
-        return $this->column;
+        return $this->columnName;
     }
 }

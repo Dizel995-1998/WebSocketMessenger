@@ -2,6 +2,7 @@
 
 namespace Lib\Database\Reader\ReflectionReader;
 
+use Entity\Picture;
 use Lib\Database\Column\BaseColumn;
 use Lib\Database\Column\IntegerColumn;
 use Lib\Database\Column\PrimaryKey;
@@ -24,6 +25,7 @@ class ReflectionReader implements IReader
     protected ?string $primaryKeyColumn = null;
     protected ?string $primaryKeyProperty = null;
     protected array $properties = [];
+    protected array $relations = [];
 
     /**
      * Возвращает название класса без namespace
@@ -62,14 +64,35 @@ class ReflectionReader implements IReader
 
         // провалидировать JSON на минимально необходимые поля
 
-//        protected string $name,
-//        protected bool $isNullable = true,
-//        protected bool $isPrimaryKey = false,
-//        protected $defaultValue = null
-
         $nameSpace = '\\Lib\\Database\\Column\\';
 
         return (new ($nameSpace . $matches['column'])($jsonDecode['name'], true));
+    }
+
+    protected function getRelation(string $phpDoc) : ?BaseRelation
+    {
+        $regexPattern = '/' . '(?<relation>' . implode('|', $this->getShortClassNames(self::RELATIONS_TYPES)) . ') ?\((?<json>.+)\)/';
+
+        if (!preg_match($regexPattern, $phpDoc, $matches)) {
+            return null;
+        }
+
+        if (!$jsonDecode = json_decode($matches['json'], true)) {
+            throw new \InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
+        }
+
+        // провалидировать JSON на минимально необходимые поля
+
+        $nameSpace = '\\Lib\\Database\\Relations\\';
+
+        /**
+        protected string $sourceColumn,
+        protected string $sourceTable,
+        protected string $targetColumn,
+        protected string $targetTable,
+         */
+
+        return (new ($nameSpace . $matches['relation'])($jsonDecode['name'], 'users', 'id', 'pictures'));
     }
 
     protected function parse() : void
@@ -82,18 +105,20 @@ class ReflectionReader implements IReader
             $this->tableName = 'access_tokens';
         }
 
-//        if (!$this->tableName = $this->extractTableNameFromDoc((string) $reflectionClass->getDocComment())) {
-//            throw new \InvalidArgumentException(sprintf('Entity "%s" does not table name in php doc', $this->entityClassName));
-//        }
 
         foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
 
-            if (!$column = $this->getColumn($reflectionProperty->getDocComment())) {
+            if ($column = $this->getColumn($reflectionProperty->getDocComment())) {
+                $this->properties[$reflectionProperty->getName()] = $column;
                 continue;
             }
 
-            $this->properties[$reflectionProperty->getName()] = $column;
+            if ($relation = $this->getRelation($reflectionProperty->getDocComment())) {
+                $this->relations[$reflectionProperty->getName()] = $relation;
+            }
         }
+
+        $x = 0;
 
 //        if (!$this->primaryKeyProperty) {
 //            throw new \RuntimeException(sprintf('У сущности "%s" отсутствует первичный ключ', $this->entityClassName));
@@ -126,7 +151,6 @@ class ReflectionReader implements IReader
 
     public function getPrimaryKey(): ?string
     {
-        return 'id';
         return $this->primaryKeyColumn;
     }
 
@@ -167,12 +191,15 @@ class ReflectionReader implements IReader
 
     public static function getEntityClassNameByTable(string $tableName): ?string
     {
-        // TODO: Implement getEntityClassNameByTable() method.
+        return Picture::class;
     }
 
+    /**
+     * @return BaseRelation[]
+     */
     public function getRelations(): array
     {
-        return [];
+        return $this->relations;
     }
 
     /**
@@ -195,6 +222,7 @@ class ReflectionReader implements IReader
 
     public function getPrimaryColumn(): ?string
     {
+        return 'id';
         return $this->primaryKeyColumn;
     }
 

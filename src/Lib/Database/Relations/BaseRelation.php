@@ -9,18 +9,18 @@ abstract class BaseRelation
         protected string $sourceTable,
         protected string $targetColumn,
         protected string $targetTable,
-        protected string $sourceEntity,
-        protected string $targetEntity
+        protected ?string $sourceEntity = null,
+        protected ?string $targetEntity = null
     ) {
 
     }
 
-    public function getTargetEntity() : string
+    public function getTargetEntity() : ?string
     {
         return $this->targetEntity;
     }
 
-    public function getSourceEntity() : string
+    public function getSourceEntity() : ?string
     {
         return $this->sourceEntity;
     }

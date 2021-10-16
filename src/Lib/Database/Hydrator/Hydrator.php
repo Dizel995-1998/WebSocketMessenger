@@ -21,6 +21,7 @@ class Hydrator
                 && !$propertyReflector->getType()->allowsNull()
                 && empty($dbData[$columnName->getName()])
             ) {
+                continue;
                 throw new \RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $metaData->getEntityName()));
             }
 
@@ -32,7 +33,15 @@ class Hydrator
             foreach ($associations as $propertyName => $relation) {
                 $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
-                $propertyReflector->setValue($ormEntity, new LazyCollection($relation));
+
+                // fixme: вызов свойства первичного ключа
+                $propPrimaryKey = $reflectionClass->getProperty('id');
+                $propPrimaryKey->setAccessible(true);
+
+                $columnExpression = $metaData->getColumnNameByProperty('id')->getName();
+
+                $whereCondition = [$metaData->getTableName() . '.' . $columnExpression => $propPrimaryKey->getValue($ormEntity)];
+                $propertyReflector->setValue($ormEntity, new LazyCollection($relation, $whereCondition));
             }
         }
 
