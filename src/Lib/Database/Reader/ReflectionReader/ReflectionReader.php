@@ -65,30 +65,27 @@ class ReflectionReader implements IReader
 
     /**
      * @param string $phpDoc
+     * @param string $propertyName
      * @return BaseColumn|null
      * @throws ReflectionException
      */
-    protected function getColumn(string $phpDoc) : ?BaseColumn
+    protected function getColumn(string $phpDoc, string $propertyName) : ?BaseColumn
     {
-        $regexPattern = '/' . '(?<column>' . implode('|', $this->getShortClassNames(self::PROPERTIES_TYPES)) . ') ?\((?<json>.+)\)/';
+        $regexPattern = '/' . '(?<column>' . implode('|', $this->getShortClassNames(self::PROPERTIES_TYPES)) . ') ?\((?<json>.*)\)/';
 
         if (!preg_match($regexPattern, $phpDoc, $matches)) {
             return null;
         }
 
-        if (!$jsonDecode = json_decode($matches['json'], true)) {
-            throw new InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
+        if (($jsonDecode = json_decode($matches['json'], true)) === false) {
+            throw new InvalidArgumentException('Cannot parse json, reason: ' . json_last_error_msg());
         }
-
-        $this->validate($jsonDecode, [
-            'name' => 'required',
-            'nullable' => 'boolean|default:true',
-        ]);
 
         $nameSpace = 'Lib\\Database\\Column\\';
 
         // todo: если нет ключа name, можно использовать camelCase от названия свойства explodeCamelCase method
 
+        $jsonDecode['name'] = $jsonDecode['name'] ?: $this->explodeCamelCase($propertyName);
         $columnClassName = $nameSpace . $matches['column'];
         $isPK = $columnClassName == PrimaryKey::class;
 
@@ -128,13 +125,13 @@ class ReflectionReader implements IReader
     }
 
     /**
-     * @example HelloWorld => hello_world
-     * @param string $className
+     * @example helloWorld => hello_world
+     * @param string $expression
      * @return string
      */
-    protected function explodeCamelCase(string $className) : string
+    protected function explodeCamelCase(string $expression) : string
     {
-        $arParts = preg_split('/(?:[A-Z]+|[A-Z][a-z]+)\K(?=[A-Z])/', $className, -1, PREG_SPLIT_NO_EMPTY);
+        $arParts = preg_split('/(?:[a-z]+|[A-Z][a-z]+)\K(?=[A-Z])/', $expression, -1, PREG_SPLIT_NO_EMPTY);
 
         return implode('_', array_map(function ($item) {
             return strtolower($item);
@@ -153,7 +150,7 @@ class ReflectionReader implements IReader
 
         foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
 
-            if ($column = $this->getColumn($reflectionProperty->getDocComment())) {
+            if ($column = $this->getColumn($reflectionProperty->getDocComment(), $reflectionProperty->getName())) {
                 $this->properties[$reflectionProperty->getName()] = $column;
 
                 if ($column instanceof PrimaryKey) {
