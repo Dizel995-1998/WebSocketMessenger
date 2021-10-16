@@ -35,5 +35,6 @@ abstract class BaseColumn
     }
 
     // todo: вернуть что за тип, тот который в БД?
+    // todo: UPD, если да - сделать класс СУБД типов
     abstract public function getType(): string;
 }
