@@ -13,7 +13,7 @@ class DbResult
 
     public function fetch() : array
     {
-        return current($this->dbData);
+        return current($this->dbData) ?: [];
     }
 
     public function fetchAll() : array
