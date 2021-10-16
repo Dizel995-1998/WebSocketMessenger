@@ -13,6 +13,7 @@ use Lib\Database\Reader\IReader;
 use Lib\Database\Relations\BaseRelation;
 use Lib\Database\Relations\OneToMany;
 use Lib\Database\Relations\OneToOne;
+use Rakit\Validation\Validator;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -32,6 +33,8 @@ class ReflectionReader implements IReader
     protected array $properties = [];
     protected array $relations = [];
 
+    public function __construct(protected Validator $validator) { }
+
     /**
      * Возвращает название класса без namespace
      * @param array $classNames
@@ -49,6 +52,16 @@ class ReflectionReader implements IReader
         return $res;
     }
 
+    protected function validate(array $inputData, array $validateRules) : void
+    {
+        $validation = $this->validator->make($inputData, $validateRules);
+        $validation->validate();
+
+        // fixme: костыль с распечатыванием ошибки
+        if ($validation->fails()) {
+            throw new RuntimeException(implode(', ', $validation->errors->all()));
+        }
+    }
 
     /**
      * @param string $phpDoc
@@ -67,7 +80,10 @@ class ReflectionReader implements IReader
             throw new InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
         }
 
-        // провалидировать JSON на минимально необходимые поля
+        $this->validate($jsonDecode, [
+            'name' => 'required',
+            'nullable' => 'boolean|default:true',
+        ]);
 
         $nameSpace = 'Lib\\Database\\Column\\';
 
@@ -94,14 +110,21 @@ class ReflectionReader implements IReader
             throw new InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
         }
 
-        // провалидировать JSON на минимально необходимые поля
+        $this->validate($jsonDecode, [
+            'name' => 'alpha_dash',
+            'mappedBy' => 'required|alpha_dash'
+        ]);
 
         // fixme: хардкод неймспейсов
         $nameSpace = '\\Lib\\Database\\Relations\\';
         $nameSpaceEntity = 'Entity\\';
         $targetTable = self::getTableNameByEntity($nameSpaceEntity . $jsonDecode['targetEntity']);
 
-        return (new ($nameSpace . $matches['relation'])($jsonDecode['name'], 'users', $jsonDecode['mappedBy'], $targetTable));
+        if (!$jsonDecode['name']) {
+            $jsonDecode['name'] = $this->getPrimaryColumn();
+        }
+
+        return (new ($nameSpace . $matches['relation'])($jsonDecode['name'], $this->tableName, $jsonDecode['mappedBy'], $targetTable));
     }
 
     /**
