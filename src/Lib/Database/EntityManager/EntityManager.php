@@ -80,6 +80,7 @@ class EntityManager
     }
 
     /**
+     * todo: добавить валидации входного объекта
      * @throws ReflectionException
      */
     public function save(object $entity) : bool
