@@ -2,15 +2,18 @@
 
 namespace Lib\Database\EntityManager;
 
+use InvalidArgumentException;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
 use Lib\Database\Reader\IReader;
+use ReflectionException;
+use ReflectionProperty;
+use RuntimeException;
 
 class EntityManager
 {
     /** @var array Коллекция восстановленных из БД объектов */
     protected static array $unitOfWork = [];
-
 
     public function __construct(
         protected IReader $entityReader,
@@ -22,7 +25,7 @@ class EntityManager
     public function findBy(string $entityClassName, array $whereCondition) : ?object
     {
         if (!class_exists($entityClassName)) {
-            throw new \InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
+            throw new InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
         }
 
         $this->entityReader->readEntity($entityClassName);
@@ -47,7 +50,8 @@ class EntityManager
 
         $entity = Hydrator::getEntity($this->entityReader, $dbData);
 
-        if (isset($entity)) {
+        /** todo: какой то уродский способ проверки заполненности объекта */
+        if (array_filter((array) $entity)) {
             self::$unitOfWork[spl_object_hash($entity)] = $entity;
         }
 
@@ -56,13 +60,13 @@ class EntityManager
 
     public function findByPrimaryKey(string $entityClassName, int|string $id) : ?object
     {
-        return $this->findBy($entityClassName, $this->entityReader->getPrimaryKey(), $id);
+        return $this->findBy($entityClassName, [$this->entityReader->getPrimaryKey() => $id]);
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
-    public function save(object $entity)
+    public function save(object $entity) : bool
     {
         $this->entityReader->readEntity(get_class($entity));
         $arData = [];
@@ -73,7 +77,7 @@ class EntityManager
                 continue;
             }
 
-            $propertyReflector = new \ReflectionProperty($entity, $propertyName);
+            $propertyReflector = new ReflectionProperty($entity, $propertyName);
             $propertyReflector->setAccessible(true);
 
             // todo: в будущем так же сделать проверку на nullable из ридера
@@ -81,7 +85,7 @@ class EntityManager
                 !$propertyReflector->hasDefaultValue() &&
                 !$propertyReflector->isInitialized($entity)
             ) {
-                throw new \RuntimeException(sprintf('Сущность "%s" имеет не инициализированное свойство: "%s"', get_class($entity), $propertyName));
+                throw new RuntimeException(sprintf('Сущность "%s" имеет не инициализированное свойство: "%s"', get_class($entity), $propertyName));
             }
 
             if ($propValue = $propertyReflector->getValue($entity)) {
@@ -97,7 +101,7 @@ class EntityManager
         // Присвоение идентификатора БД - сущности
         $id = $this->queryBuilder->insert($this->entityReader->getTableName(), $arData);
 
-        $propertyReflector = new \ReflectionProperty($entity, $this->entityReader->getPrimaryProperty());
+        $propertyReflector = new ReflectionProperty($entity, $this->entityReader->getPrimaryProperty());
         $propertyReflector->setAccessible(true);
         $propertyReflector->setValue($entity, $id);
         return true;
