@@ -15,6 +15,12 @@ class Schema
         $this->tables = $tables;
     }
 
+    public function addTable(Table $table) : self
+    {
+        $this->tables[] = $table;
+        return $this;
+    }
+
     /**
      * @return Table[]
      */
