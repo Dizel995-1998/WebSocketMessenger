@@ -23,7 +23,7 @@ interface IReader
     public function getProperties() : array;
 
     /**
-     * @return string[]
+     * @return BaseColumn[]
      */
     public function getColumns() : array;
 

@@ -15,6 +15,7 @@ abstract class BaseColumn
      */
     public function __construct(
         protected string $name,
+        protected string $tableName,
         protected bool $isPrimaryKey = false,
         protected bool $isNullable = true,
         protected ?int $length = null,
@@ -38,6 +39,10 @@ abstract class BaseColumn
         return $this->name;
     }
 
+    public function getTableName() : string
+    {
+        return $this->tableName;
+    }
 
     /**
      * Возвращает тип данных формата СУБД

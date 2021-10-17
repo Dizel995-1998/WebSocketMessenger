@@ -88,6 +88,7 @@ class ReflectionReader implements IReader
 
         return (new ($columnClassName)(
             $jsonDecode['name'],
+            $this->tableName,
             $isPK,
             $jsonDecode['nullable'] ?: false,
             $jsonDecode['length'] ?: null,
@@ -184,8 +185,8 @@ class ReflectionReader implements IReader
 
                     // fixme: для параметра nullable реализовать в связах параметр обязательности связи.
                     $column = $targetColumn instanceof StringColumn ?
-                        new StringColumn($relation->getSourceColumn()) :
-                        new IntegerColumn($relation->getSourceColumn());
+                        new StringColumn($relation->getSourceColumn(), $this->tableName) :
+                        new IntegerColumn($relation->getSourceColumn(), $this->tableName);
 
                     $this->properties[$reflectionProperty->getName()] = $column;
                 }
