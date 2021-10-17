@@ -11,19 +11,19 @@ use Lib\Database\Column as ORM;
 class AccessToken
 {
     /**
-     * @ORM\PrimaryKey ({"name":"id"})
+     * @ORM\IntegerColumn ({"isPrimaryKey":true})
      * @var int|null
      */
     protected ?int $id = null;
 
     /**
-     * @ORM\StringColumn({"name":"token"})
+     * @ORM\StringColumn()
      * @var string
      */
     protected string $token;
 
     /**
-     * @ORM\IntegerColumn ({"name":"user_id"})
+     * @ORM\IntegerColumn()
      * @var int
      */
     protected int $userId;

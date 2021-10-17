@@ -8,10 +8,16 @@ namespace Entity;
 class Picture implements \JsonSerializable
 {
     /**
-     * @IntegerColumn({"name":"id"})
+     * @IntegerColumn ({"name":"id","isPrimaryKey":true})
      * @var
      */
     protected $id;
+
+    /**
+     * @IntegerColumn({"name":"user_id"})
+     * @var
+     */
+    protected $userId;
 
     /**
      * @StringColumn({"name":"file_name"})

@@ -4,10 +4,7 @@ namespace Entity;
 
 use Lib\Database\Relations\OneToMany;
 use Lib\Database\Relations\OneToOne;
-use Lib\Database\Column\PrimaryKey;
-use Lib\Database\Column\IntegerColumn;
 use Lib\Database\Column\StringColumn;
-
 
 /**
  * @Table({"name":"users"})
@@ -15,7 +12,7 @@ use Lib\Database\Column\StringColumn;
 class User implements \JsonSerializable
 {
     /**
-     * @PrimaryKey({"name":"id"})
+     * @IntegerColumn ({"isPrimaryKey":true})
      * @var int|null
      */
     protected ?int $id = null;
@@ -61,6 +58,12 @@ class User implements \JsonSerializable
      * @var
      */
     protected $picture;
+
+    /**
+     * @OneToMany({"targetEntity":"Picture", "mappedBy":"user_id"})
+     * @var
+     */
+    protected $pictures;
 
     public function getPicture()
     {
@@ -132,10 +135,9 @@ class User implements \JsonSerializable
         return $this->pictures;
     }
 
+    // fixme: вызвать сервис провайдер и получить сервис хеширования
     public function setPassword(string $password) : self
     {
-        // fixme: вызвать сервис провайдер и получить сервис хеширования
-        // todo: или применить observer и сервис слушателей
         $this->password = $password;
         return $this;
     }
