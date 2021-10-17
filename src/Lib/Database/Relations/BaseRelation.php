@@ -2,27 +2,18 @@
 
 namespace Lib\Database\Relations;
 
+/**
+ * todo ввести параметр обязательности связи
+ */
 abstract class BaseRelation
 {
     public function __construct(
         protected string $sourceColumn,
         protected string $sourceTable,
         protected string $targetColumn,
-        protected string $targetTable,
-        protected ?string $sourceEntity = null,
-        protected ?string $targetEntity = null
+        protected string $targetTable
     ) {
 
-    }
-
-    public function getTargetEntity() : ?string
-    {
-        return $this->targetEntity;
-    }
-
-    public function getSourceEntity() : ?string
-    {
-        return $this->sourceEntity;
     }
 
     public function getSourceTable() : string
