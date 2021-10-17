@@ -7,6 +7,9 @@ use Lib\Database\Drivers\Exceptions\CannotConnectToDataBase;
 use Lib\Database\Drivers\Interfaces\IConnection;
 use PDO;
 
+/**
+ * fixme: экранирование SQL должно осуществляться на уровне драйвера
+ */
 class PdoDriver implements IConnection
 {
     const DB_SQL_TYPE = 'mysql';
@@ -61,5 +64,43 @@ class PdoDriver implements IConnection
     public function getLastInsertedId(): null|string
     {
         return $this->getConnection()->lastInsertId() ?: null;
+    }
+
+    public function getTablesName(): array
+    {
+        $res = [];
+        $tables = $this->getConnection()->query('SHOW TABLES')->fetchAll();
+
+        foreach ($tables as $table) {
+            $res[] = current($table);
+        }
+
+        return $res;
+    }
+
+    /**
+     * @param array $tables
+     * @return <string, array>
+     * @throws CannotConnectToDataBase
+     */
+    public function getColumnsByTables(array $tables) : array
+    {
+        $res = [];
+
+        // todo: добавить экранирование
+
+        $sql = "SELECT COLUMN_NAME, TABLE_NAME, COLUMN_TYPE
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = '{$this->dbName}' AND TABLE_NAME IN (" . implode(',', array_map(function ($item) {
+                return is_string($item) ? "'" . $item . "'" : $item;
+            }, $tables)) . ')';
+
+        $columns = $this->getConnection()->query($sql);
+
+        while ($tmp = $columns->fetch(PDO::FETCH_ASSOC)) {
+            $res[$tmp['TABLE_NAME']][] = ['name' => $tmp['COLUMN_NAME'], 'type' => $tmp['COLUMN_TYPE']];
+        }
+
+        return $res;
     }
 }

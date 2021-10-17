@@ -19,4 +19,14 @@ interface IConnection
     public function query(string $sql) : DbResult;
 
     public function getLastInsertedId() : null|string;
+
+    /**
+     * @return string[]
+     */
+    public function getTablesName() : array;
+
+    /**
+     * @return <string, array>
+     */
+    public function getColumnsByTables(array $tables) : array;
 }
