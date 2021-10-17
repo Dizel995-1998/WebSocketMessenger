@@ -6,6 +6,6 @@ class StringColumn extends BaseColumn
 {
     public function getType(): string
     {
-        return 'string';
+        return 'varchar(' . $this->length . ')';
     }
 }

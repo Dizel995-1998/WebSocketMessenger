@@ -4,19 +4,23 @@ namespace Lib\Database\Column;
 
 abstract class BaseColumn
 {
+    const DEFAULT_LENGTH = 50;
+
     /**
      * @param string $name
-     * @param bool $isNullable
      * @param bool $isPrimaryKey
+     * @param bool $isNullable
+     * @param int|null $length
      * @param null $defaultValue
      */
     public function __construct(
         protected string $name,
-        protected bool $isNullable = true,
         protected bool $isPrimaryKey = false,
+        protected bool $isNullable = true,
+        protected ?int $length = null,
         protected $defaultValue = null
     ) {
-
+        $this->length = $length ?? self::DEFAULT_LENGTH;
     }
 
     public function isPrimaryKey(): bool
@@ -34,7 +38,10 @@ abstract class BaseColumn
         return $this->name;
     }
 
-    // todo: вернуть что за тип, тот который в БД?
-    // todo: UPD, если да - сделать класс СУБД типов
+
+    /**
+     * Возвращает тип данных формата СУБД
+     * @return string
+     */
     abstract public function getType(): string;
 }

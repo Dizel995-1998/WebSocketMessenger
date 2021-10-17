@@ -6,6 +6,6 @@ class IntegerColumn extends BaseColumn
 {
     public function getType(): string
     {
-        return 'integer';
+        return 'int(' . $this->length . ')';
     }
 }
