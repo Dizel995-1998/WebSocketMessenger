@@ -7,7 +7,6 @@ use Entity\User;
 use InvalidArgumentException;
 use Lib\Database\Column\BaseColumn;
 use Lib\Database\Column\IntegerColumn;
-use Lib\Database\Column\PrimaryKey;
 use Lib\Database\Column\StringColumn;
 use Lib\Database\Reader\IReader;
 use Lib\Database\Relations\BaseRelation;
@@ -23,7 +22,7 @@ class ReflectionReader implements IReader
 {
     const PROPERTY_FILTER = ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE;
 
-    const PROPERTIES_TYPES = [IntegerColumn::class, StringColumn::class, PrimaryKey::class];
+    const PROPERTIES_TYPES = [IntegerColumn::class, StringColumn::class];
     const RELATIONS_TYPES = [OneToOne::class, OneToMany::class];
 
     protected string $entityClassName;
@@ -32,8 +31,6 @@ class ReflectionReader implements IReader
     protected ?string $primaryKeyProperty = null;
     protected array $properties = [];
     protected array $relations = [];
-
-    public function __construct(protected Validator $validator) { }
 
     /**
      * Возвращает название класса без namespace
@@ -87,9 +84,15 @@ class ReflectionReader implements IReader
 
         $jsonDecode['name'] = $jsonDecode['name'] ?: $this->explodeCamelCase($propertyName);
         $columnClassName = $nameSpace . $matches['column'];
-        $isPK = $columnClassName == PrimaryKey::class;
+        $isPK = $jsonDecode['isPrimaryKey'] ?: false;
 
-        return (new ($columnClassName)($jsonDecode['name'], $jsonDecode['nullable'] ?: false, $isPK, $jsonDecode['default_value'] ?: null));
+        return (new ($columnClassName)(
+            $jsonDecode['name'],
+            $isPK,
+            $jsonDecode['nullable'] ?: false,
+            $jsonDecode['length'] ?: null,
+            $jsonDecode['default_value'] ?: null
+        ));
     }
 
     /**
@@ -107,11 +110,6 @@ class ReflectionReader implements IReader
             throw new InvalidArgumentException('Cannot parse json, reason:' . json_last_error_msg());
         }
 
-        $this->validate($jsonDecode, [
-            'name' => 'alpha_dash',
-            'mappedBy' => 'required|alpha_dash'
-        ]);
-
         // fixme: хардкод неймспейсов
         $nameSpace = '\\Lib\\Database\\Relations\\';
         $nameSpaceEntity = 'Entity\\';
@@ -121,7 +119,12 @@ class ReflectionReader implements IReader
             $jsonDecode['name'] = $this->getPrimaryColumn();
         }
 
-        return (new ($nameSpace . $matches['relation'])($jsonDecode['name'], $this->tableName, $jsonDecode['mappedBy'], $targetTable));
+        return (new ($nameSpace . $matches['relation'])(
+            $jsonDecode['name'],
+            $this->tableName,
+            $jsonDecode['mappedBy'],
+            $targetTable)
+        );
     }
 
     /**
@@ -141,32 +144,71 @@ class ReflectionReader implements IReader
     /**
      * @throws ReflectionException
      */
-    protected function parse() : void
+    protected function parseColumns(ReflectionProperty ...$reflectionProperties) : void
     {
-        $reflectionClass = new ReflectionClass($this->entityClassName);
-
-        // todo: на данный момент нет чтения пхп дока класса и название таблицы для сущности формируется из её имени
-        $this->tableName = $this->explodeCamelCase($reflectionClass->getShortName()) . 's';
-
-        foreach ($reflectionClass->getProperties(self::PROPERTY_FILTER) as $reflectionProperty) {
-
+        foreach ($reflectionProperties as $reflectionProperty) {
             if ($column = $this->getColumn($reflectionProperty->getDocComment(), $reflectionProperty->getName())) {
                 $this->properties[$reflectionProperty->getName()] = $column;
 
-                if ($column instanceof PrimaryKey) {
+                if ($column->isPrimaryKey()) {
                     $this->primaryKeyProperty = $reflectionProperty->getName();
                     $this->primaryKeyColumn = $column->getName();
                 }
-
-                continue;
             }
+        }
+    }
 
-            if ($relation = $this->getRelation($reflectionProperty->getDocComment())) {
-                $this->relations[$reflectionProperty->getName()] = $relation;
+    // todo обновить интерфейс ридера
+    protected function getColumnByName(string $columnName) : ?BaseColumn
+    {
+        foreach ($this->properties as $propertyName => $column) {
+            if ($column->getName() == $columnName) {
+                return $column;
             }
         }
 
-        if (!$this->primaryKeyProperty) {
+        return null;
+    }
+
+    protected function parseRelations(ReflectionProperty ...$reflectionProperties) : void
+    {
+        foreach ($reflectionProperties as $reflectionProperty) {
+            if ($relation = $this->getRelation($reflectionProperty->getDocComment())) {
+                // fixme: жёсткий костыль, если у свойства отношения указано название колонки, считаем что это физ.колонка в БД, и её нужно прокинуть в свойство сущности
+                if ($relation->getSourceColumn() != $this->primaryKeyColumn) {
+                    $targetEntityClassName = self::getEntityClassNameByTable($relation->getTargetTable());
+
+                    $targetColumn = (new self())
+                        ->readEntity($targetEntityClassName)
+                        ->getColumnByName($relation->getTargetColumn());
+
+                    // fixme: для параметра nullable реализовать в связах параметр обязательности связи.
+                    $column = $targetColumn instanceof StringColumn ?
+                        new StringColumn($relation->getSourceColumn()) :
+                        new IntegerColumn($relation->getSourceColumn());
+
+                    $this->properties[$reflectionProperty->getName()] = $column;
+                }
+
+                $this->relations[$reflectionProperty->getName()] = $relation;
+            }
+        }
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function parse() : void
+    {
+        $reflectionClass = new ReflectionClass($this->entityClassName);
+        // todo: на данный момент нет чтения пхп дока класса и название таблицы для сущности формируется из её имени
+        $this->tableName = $this->explodeCamelCase($reflectionClass->getShortName()) . 's';
+
+        $reflectionProperties = $reflectionClass->getProperties(self::PROPERTY_FILTER);
+        $this->parseColumns(...$reflectionProperties);
+        $this->parseRelations(...$reflectionProperties);
+
+        if (empty($this->primaryKeyProperty) || empty($this->primaryKeyColumn)) {
             throw new RuntimeException(sprintf('У сущности "%s" отсутствует первичный ключ', $this->entityClassName));
         }
     }
