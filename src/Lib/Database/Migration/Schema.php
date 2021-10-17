@@ -85,40 +85,37 @@ class Schema
      * Нужна другая возвращаемая структура, таблицы у которых есть дифф и этот дифф нужно воссоздать, и таблицы у которых нужно дифф удалить
      * @param Schema $master
      * @param Schema $slave
-     * @return array
+     * @return DiffSchemaDto
      */
-    #[ArrayShape(['add' => "array", 'remove' => "array"])] public static function diffSchemas(Schema $master, Schema $slave) : array
+    public static function diffSchemas(Schema $master, Schema $slave) : DiffSchemaDto
     {
-        $addTables = [];
-        $removeTables = [];
+        $dtoDiff = new DiffSchemaDto();
 
         /*** Ищем таблицы и колонки которые есть в master схеме и которых нет в slave схеме */
         foreach ($master->getTables() as $masterTable) {
             if (!$table = self::findTableInSchema($slave, $masterTable->getName())) {
-                $addTables[] = $masterTable;
+                $dtoDiff->addTableForCreate($masterTable);
+                // fixme: помоему тут неверное условие
                 continue;
             }
 
             if (!empty($diffColumns = self::diffBetweenTables($masterTable, $table))) {
-                $addTables[] = new Table($masterTable->getName(), $diffColumns);
+                $dtoDiff->addColumnsForCreate(...$diffColumns);
             }
         }
 
         /*** Ищем таблицы и колонки которые есть в slave схеме и которых нет в master схеме */
         foreach ($slave->getTables() as $slaveTable) {
             if (!$table = self::findTableInSchema($master, $slaveTable->getName())) {
-                $removeTables[] = $slaveTable;
+                $dtoDiff->addTableForDelete($slaveTable);
                 continue;
             }
 
             if (!empty($diffColumns = self::diffBetweenTables($slaveTable, $table))) {
-                $removeTables[] = new Table($slaveTable->getName(), $diffColumns);
+                $dtoDiff->addColumnsForDelete(...$diffColumns);
             }
         }
 
-        return [
-            'add' => $addTables,
-            'remove' => $removeTables
-        ];
+        return $dtoDiff;
     }
 }
