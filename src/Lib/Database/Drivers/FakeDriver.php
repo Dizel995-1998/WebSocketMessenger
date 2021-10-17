@@ -2,19 +2,29 @@
 
 namespace Lib\Database\Drivers;
 
-use Lib\Database\Migration\Schema;
-
 class FakeDriver extends PdoDriver
 {
+    protected array $queries = [];
+
+    public function __construct() {}
+
+    /**
+     * @return string[]
+     */
+    public function getQueries() : array
+    {
+        return $this->queries;
+    }
+
     public function exec(string $sql): bool
     {
-        echo $sql . '<br/>';
+        $this->queries[] = $sql;
         return true;
     }
 
     public function query(string $sql): DbResult
     {
-        echo $sql . '<br/>';
+        $this->queries[] = $sql;
         return new DbResult([]);
     }
 }

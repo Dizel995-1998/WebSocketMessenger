@@ -2,6 +2,7 @@
 
 namespace Lib\Database\Migration;
 
+use Lib\Database\Drivers\FakeDriver;
 use Lib\Database\Drivers\Interfaces\IConnection;
 use Lib\Database\Reader\IReader;
 
@@ -23,7 +24,11 @@ class MigrationAutoWriter
         }
     }
 
-    public function runSync(array $ormClasses) : void
+    /**
+     * @param array $ormClasses список классов ORM сущностей
+     * @return string[] массив SQL запросов для синхронизации
+     */
+    public function runSync(array $ormClasses) : array
     {
         $this->isExistClasses($ormClasses);
         $ormSchema = new Schema();
@@ -37,24 +42,28 @@ class MigrationAutoWriter
         $dbSchema = $this->dbConnection->getSchema();
         $dtoDiff = Schema::diffSchemas($ormSchema, $dbSchema);
 
+        $fakeDbConnection = new FakeDriver();
+
         /** Удаляем таблицы */
         foreach ($dtoDiff->getTablesForDelete() as $table) {
-            $this->dbConnection->dropTable($table);
+            $fakeDbConnection->dropTable($table);
         }
 
         /** Удаляем колонки */
         foreach ($dtoDiff->getColumnsForDelete() as $column) {
-            $this->dbConnection->dropColumn($column);
+            $fakeDbConnection->dropColumn($column);
         }
 
         /** Создаём таблицы */
         foreach ($dtoDiff->getTablesForCreate() as $table) {
-            $this->dbConnection->addTable($table);
+            $fakeDbConnection->addTable($table);
         }
 
         /** Создаём колонки */
         foreach ($dtoDiff->getColumnsForCreate() as $column) {
-            $this->dbConnection->addColumn($column);
+            $fakeDbConnection->addColumn($column);
         }
+
+        return $fakeDbConnection->getQueries();
     }
 }
