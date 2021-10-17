@@ -6,6 +6,7 @@ use Lib\Database\Drivers\Interfaces\IConnection;
 
 /**
  * fixme: необходимо экранирование
+ * todo: необходим интерфейс
  */
 class QueryBuilder
 {
@@ -134,6 +135,12 @@ class QueryBuilder
         return $this->dbConnection->exec($sql);
     }
 
+    /**
+     * Вставляет запись в СУБД
+     * @param string $tableName
+     * @param array $fieldsValues
+     * @return string Возвращает идентификатор последней вставленной записи
+     */
     public function insert(string $tableName, array $fieldsValues) : string
     {
         $sql = sprintf('INSERT INTO %s (%s) VALUES (%s)',
