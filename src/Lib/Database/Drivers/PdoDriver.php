@@ -3,14 +3,17 @@
 namespace Lib\Database\Drivers;
 
 
+use Lib\Database\Column\BaseColumn;
 use Lib\Database\Drivers\Exceptions\CannotConnectToDataBase;
 use Lib\Database\Drivers\Interfaces\IConnection;
+use Lib\Database\Migration\Schema;
+use Lib\Database\Migration\Table;
 use PDO;
 
 /**
  * fixme: экранирование SQL должно осуществляться на уровне драйвера
  */
-class PdoDriver implements IConnection
+class PdoDriver extends BaseDriver
 {
     const DB_SQL_TYPE = 'mysql';
 
@@ -66,7 +69,7 @@ class PdoDriver implements IConnection
         return $this->getConnection()->lastInsertId() ?: null;
     }
 
-    public function getTablesName(): array
+    protected function getTablesName(): array
     {
         $res = [];
         $tables = $this->getConnection()->query('SHOW TABLES')->fetchAll();
@@ -83,7 +86,7 @@ class PdoDriver implements IConnection
      * @return <string, array>
      * @throws CannotConnectToDataBase
      */
-    public function getColumnsByTables(array $tables) : array
+    protected function getColumnsByTables(array $tables) : array
     {
         $res = [];
 
@@ -102,5 +105,33 @@ class PdoDriver implements IConnection
         }
 
         return $res;
+    }
+
+    public function getSchema(): Schema
+    {
+        $schema = new Schema();
+        $tablesNames = $this->getTablesName();
+        $dbColumns = $this->getColumnsByTables($tablesNames);
+        $preparedColumns = [];
+
+        // fixme: дикий хардкод =)
+        $convertColumnToObj = function (string $columnName, string $columnsType, string $tableName) : \Lib\Database\Column\BaseColumn {
+            return str_contains($columnsType, 'int') ?
+                new \Lib\Database\Column\IntegerColumn($columnName, $tableName) :
+                new \Lib\Database\Column\StringColumn($columnName, $tableName);
+        };
+
+        foreach ($dbColumns as $tableName => $columns) {
+            foreach ($columns as $column) {
+                $preparedColumns[$tableName][] = $convertColumnToObj($column['name'], $column['type'], $tableName);
+            }
+        }
+
+        foreach ($tablesNames as $tableName) {
+            $table = new Table($tableName, $preparedColumns[$tableName]);
+            $schema->addTable($table);
+        }
+
+        return $schema;
     }
 }

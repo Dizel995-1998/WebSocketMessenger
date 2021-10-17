@@ -2,7 +2,10 @@
 
 namespace Lib\Database\Drivers\Interfaces;
 
+use Lib\Database\Column\BaseColumn;
 use Lib\Database\Drivers\DbResult;
+use Lib\Database\Migration\Schema;
+use Lib\Database\Migration\Table;
 
 interface IConnection
 {
@@ -20,13 +23,13 @@ interface IConnection
 
     public function getLastInsertedId() : null|string;
 
-    /**
-     * @return string[]
-     */
-    public function getTablesName() : array;
+    public function getSchema() : Schema;
 
-    /**
-     * @return <string, array>
-     */
-    public function getColumnsByTables(array $tables) : array;
+    public function dropColumn(BaseColumn $column) : void;
+
+    public function addColumn(BaseColumn $column) : void;
+
+    public function dropTable(Table $table) : void;
+
+    public function addTable(Table $table) : void;
 }
