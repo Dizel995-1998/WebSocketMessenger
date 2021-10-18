@@ -7,6 +7,8 @@ use Lib\Database\Drivers\Interfaces\IConnection;
 use Lib\Database\Drivers\PdoDriver;
 use Lib\Database\Reader\IReader;
 use Lib\Database\Reader\ReflectionReader\ReflectionReader;
+use Lib\EntitiesExtractor\EntitiesExtractor;
+use Lib\EntitiesExtractor\EntitiesExtractorInterface;
 use Lib\Request\Request;
 
 $arDbConfig = [
@@ -25,8 +27,15 @@ $arRequestConfig = [
     'requestData' => array_merge($_SERVER, $_REQUEST)
 ];
 
+$readerConfig = [
+    'ormClasses' => (new EntitiesExtractor())
+        ->setScanDir($_SERVER['DOCUMENT_ROOT'] . '/src/Entity')
+        ->runScan('Entity')
+];
+
+//Container::setService(EntitiesExtractorInterface::class, [], EntitiesExtractor::class);
 Container::setService(IConnection::class, $arDbConfig, PdoDriver::class);
-Container::setService(IReader::class, [], ReflectionReader::class);
+Container::setService(IReader::class, $readerConfig, ReflectionReader::class);
 Container::setService(ICrypto::class, ['alg' => 'SHA256'], Crypto::class);
 Container::setService(Request::class, $arRequestConfig);
 

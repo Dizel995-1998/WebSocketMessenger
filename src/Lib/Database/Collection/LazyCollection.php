@@ -42,7 +42,7 @@ class LazyCollection implements IteratorAggregate
             foreach ($dataCollection as $item) {
                 // fixme: какое то говно, придумать красивый механизм получения названия сущности по таблице
                 $reader = Container::getService(IReader::class);
-                $entityRelationName = $reader::class::getEntityClassNameByTable($this->relation->getTargetTable());
+                $entityRelationName = $reader->getEntityClassNameByTable($this->relation->getTargetTable());
                 $reader->readEntity($entityRelationName);
 
                 $this->elements[] = Hydrator::getEntity($reader, $item);

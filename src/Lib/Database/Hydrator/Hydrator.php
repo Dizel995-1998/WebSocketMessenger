@@ -47,7 +47,7 @@ class Hydrator
 
                     // fixme: хардкод рефлектор ридера
                     // fixme: жёсткий говнокод
-                    $targetEntityClassName = ReflectionReader::getEntityClassNameByTable($relation->getTargetTable());
+                    $targetEntityClassName = $metaData->getEntityClassNameByTable($relation->getTargetTable());
                     $entityManager = \Lib\Container\Container::getService(EntityManager::class);
                     $reader = Container::getService(IReader::class);
                     $reader->readEntity($targetEntityClassName);

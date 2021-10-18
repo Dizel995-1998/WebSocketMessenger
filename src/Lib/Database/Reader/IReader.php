@@ -43,13 +43,13 @@ interface IReader
      * @param string $entityClassName
      * @return string
      */
-    public static function getTableNameByEntity(string $entityClassName) : ?string;
+    public function getTableNameByEntity(string $entityClassName) : ?string;
 
     /**
      * @param string $tableName
      * @return string|null
      */
-    public static function getEntityClassNameByTable(string $tableName) : ?string;
+    public function getEntityClassNameByTable(string $tableName) : ?string;
 
     /**
      * @return <string, BaseRelation>

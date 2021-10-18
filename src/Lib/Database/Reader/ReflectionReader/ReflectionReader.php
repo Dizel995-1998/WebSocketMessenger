@@ -2,9 +2,8 @@
 
 namespace Lib\Database\Reader\ReflectionReader;
 
-use Entity\Picture;
-use Entity\User;
 use InvalidArgumentException;
+use Lib\Container\Container;
 use Lib\Database\Column\BaseColumn;
 use Lib\Database\Column\IntegerColumn;
 use Lib\Database\Column\StringColumn;
@@ -31,6 +30,19 @@ class ReflectionReader implements IReader
     protected ?string $primaryKeyProperty = null;
     protected array $properties = [];
     protected array $relations = [];
+
+    /**
+     * @todo Нужно было вынести метод установки классов в интерфейс и реализовать его
+     * @param array $ormClasses
+     */
+    public function __construct(protected array $ormClasses)
+    {
+        foreach ($this->ormClasses as $class) {
+            if (!class_exists($class)) {
+                throw new InvalidArgumentException(sprintf('Class "%s" does not exist', $class));
+            }
+        }
+    }
 
     /**
      * Возвращает название класса без namespace
@@ -114,7 +126,7 @@ class ReflectionReader implements IReader
         // fixme: хардкод неймспейсов
         $nameSpace = '\\Lib\\Database\\Relations\\';
         $nameSpaceEntity = 'Entity\\';
-        $targetTable = self::getTableNameByEntity($nameSpaceEntity . $jsonDecode['targetEntity']);
+        $targetTable = $this->getTableNameByEntity($nameSpaceEntity . $jsonDecode['targetEntity']);
 
         if (!$jsonDecode['name']) {
             $jsonDecode['name'] = $this->getPrimaryColumn();
@@ -177,9 +189,9 @@ class ReflectionReader implements IReader
             if ($relation = $this->getRelation($reflectionProperty->getDocComment())) {
                 // fixme: жёсткий костыль, если у свойства отношения указано название колонки, считаем что это физ.колонка в БД, и её нужно прокинуть в свойство сущности
                 if ($relation->getSourceColumn() != $this->primaryKeyColumn) {
-                    $targetEntityClassName = self::getEntityClassNameByTable($relation->getTargetTable());
+                    $targetEntityClassName = $this->getEntityClassNameByTable($relation->getTargetTable());
 
-                    $targetColumn = (new self())
+                    $targetColumn = (Container::getService(IReader::class))
                         ->readEntity($targetEntityClassName)
                         ->getColumnByName($relation->getTargetColumn());
 
@@ -255,21 +267,26 @@ class ReflectionReader implements IReader
         return null;
     }
 
-    public static function getTableNameByEntity(string $entityClassName): ?string
+    protected function getHashMapOrmToTable() : array
     {
-        // fixme: нужен построитель карты ORM сущностей
-        $mapOfOrmEntities = [
-            Picture::class => 'pictures',
-            User::class => 'users'
-        ];
+        $res = [];
 
-        return $mapOfOrmEntities[$entityClassName];
+        /** fixme: костыль, завязываемся на использование названий классов в качестве названий таблиц */
+        foreach ($this->ormClasses as $class) {
+            $res[$class] = $this->explodeCamelCase(current($this->getShortClassNames([$class]))) . 's';
+        }
+
+        return $res;
     }
 
-    public static function getEntityClassNameByTable(string $tableName): ?string
+    public function getTableNameByEntity(string $entityClassName): ?string
     {
-        // fixme: нужен построитель карты ORM сущностей + flip
-        return Picture::class;
+        return $this->getHashMapOrmToTable()[$entityClassName];
+    }
+
+    public function getEntityClassNameByTable(string $tableName): ?string
+    {
+        return array_flip($this->getHashMapOrmToTable())[$tableName];
     }
 
     /**
