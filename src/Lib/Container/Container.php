@@ -140,6 +140,7 @@ class Container implements ContainerInterface
     }
 
     /**
+     * fixme: избавиться от deprecated методов
      * TODO добавить в интерфейс
      * Резолвит зависимости метода сервиса
      * @param object $service
