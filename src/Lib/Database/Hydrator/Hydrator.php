@@ -2,8 +2,13 @@
 
 namespace Lib\Database\Hydrator;
 
+use Lib\Container\Container;
 use Lib\Database\Collection\LazyCollection;
+use Lib\Database\Collection\Proxy;
+use Lib\Database\EntityManager\EntityManager;
 use Lib\Database\Reader\IReader;
+use Lib\Database\Reader\ReflectionReader\ReflectionReader;
+use Lib\Database\Relations\OneToOne;
 use ReflectionClass;
 use RuntimeException;
 
@@ -33,6 +38,29 @@ class Hydrator
             foreach ($associations as $propertyName => $relation) {
                 $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
+
+                if ($relation instanceof OneToOne) {
+                    $propName = $metaData->getPropertyNameByColumn($relation->getSourceColumn());
+                    $refProp = $reflectionClass->getProperty($propName);
+                    $refProp->setAccessible(true);
+                    $conditionValue = $refProp->getValue($ormEntity);
+
+                    // fixme: хардкод рефлектор ридера
+                    // fixme: жёсткий говнокод
+                    $targetEntityClassName = ReflectionReader::getEntityClassNameByTable($relation->getTargetTable());
+                    $entityManager = \Lib\Container\Container::getService(EntityManager::class);
+                    $reader = Container::getService(IReader::class);
+                    $reader->readEntity($targetEntityClassName);
+
+
+                    $proxy = (new Proxy($targetEntityClassName, $entityManager));
+                    $proxy->onBeforeCallAnyMethod(function ($whereCondition) {
+                        return $this->entityManager->findOrFailBy($this->originClassName, $whereCondition);
+                    }, [$reader->getPrimaryProperty() => $conditionValue]);
+
+                    $propertyReflector->setValue($ormEntity, $proxy);
+                    continue;
+                }
 
                 // Для выборке только по нашей сущности WHERE ...
                 $propPrimaryKey = $reflectionClass->getProperty($metaData->getPrimaryProperty());
