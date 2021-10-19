@@ -126,18 +126,19 @@ class ReflectionReader implements IReader
         // fixme: хардкод неймспейсов
         $nameSpace = '\\Lib\\Database\\Relations\\';
         $nameSpaceEntity = 'Entity\\';
-        $targetTable = $this->getTableNameByEntity($nameSpaceEntity . $jsonDecode['targetEntity']);
 
         if (!$jsonDecode['name']) {
             $jsonDecode['name'] = $this->getPrimaryColumn();
         }
 
-        return (new ($nameSpace . $matches['relation'])(
-            $jsonDecode['name'],
-            $this->tableName,
-            $jsonDecode['mappedBy'],
-            $targetTable)
-        );
+        $relationData = [
+            'source_table'  =>  $this->tableName,
+            'source_column' =>  $jsonDecode['name'],
+            'target_table'  =>  $this->getTableNameByEntity($nameSpaceEntity . $jsonDecode['targetEntity']),
+            'target_column' =>  $jsonDecode['mappedBy']
+        ];
+
+        return (new ($nameSpace . $matches['relation'])($relationData));
     }
 
     /**

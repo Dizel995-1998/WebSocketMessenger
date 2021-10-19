@@ -2,6 +2,7 @@
 
 namespace Lib\EntitiesExtractor;
 
+// todo: перенести в Database
 class EntitiesExtractor implements EntitiesExtractorInterface
 {
     protected ?string $scanDir = null;
