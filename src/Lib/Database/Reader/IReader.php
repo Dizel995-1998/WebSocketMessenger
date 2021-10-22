@@ -7,43 +7,37 @@ use Lib\Database\Relations\BaseRelation;
 
 interface IReader
 {
-    public function readEntity(string $entityClassName) : self;
+    public function loadOrmClasses(string ...$classes) : self;
 
-    public function getPrimaryColumn() : ?string;
+    public function getPkColumnByEntity(string $entity) : ?string;
 
-    public function getPrimaryProperty() : ?string;
+    public function getPkPropertyByEntity(string $entity) : ?string;
 
-    public function getEntityName() : string;
+    public function getTableNameByEntity(string $entity) : ?string;
 
-    public function getTableName() : string;
+    public function getEntityNameByTable(string $tableName) : ?string;
 
     /**
      * @return <string, BaseColumn> (PropertyName => BaseColumn)
      */
-    public function getProperties() : array;
+    public function getProperties(string $entityName) : ?array;
 
     /**
      * @return BaseColumn[]
      */
-    public function getColumns() : array;
+    public function getColumns(string $entityName) : ?array;
 
     /**
      * @param string $propertyName
      * @return string|null
      */
-    public function getColumnNameByProperty(string $propertyName) : ?BaseColumn;
+    public function getColumnNameByProperty(string $entity, string $propertyName) : ?BaseColumn;
 
     /**
      * @param string $columnName
      * @return string|null
      */
-    public function getPropertyNameByColumn(string $columnName) : ?string;
-
-    /**
-     * @param string $entityClassName
-     * @return string
-     */
-    public function getTableNameByEntity(string $entityClassName) : ?string;
+    public function getPropertyNameByColumn(string $entity, string $columnName) : ?string;
 
     /**
      * @param string $tableName
@@ -54,5 +48,7 @@ interface IReader
     /**
      * @return <string, BaseRelation>
      */
-    public function getRelations() : array;
+    public function getRelations(string $className) : array;
+
+    public function getReflectionProperty(string $entity, string $propertyName) : ?\ReflectionProperty;
 }
