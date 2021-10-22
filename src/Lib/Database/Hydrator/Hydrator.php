@@ -3,23 +3,22 @@
 namespace Lib\Database\Hydrator;
 
 use Lib\Container\Container;
+use Lib\Database\Collection\DataBaseProxy;
 use Lib\Database\Collection\LazyCollection;
-use Lib\Database\Collection\Proxy;
 use Lib\Database\EntityManager\EntityManager;
 use Lib\Database\Reader\IReader;
-use Lib\Database\Reader\ReflectionReader\ReflectionReader;
 use Lib\Database\Relations\OneToOne;
 use ReflectionClass;
 use RuntimeException;
 
 class Hydrator
 {
-    public static function getEntity(IReader $metaData, array $dbData): object
+    public static function getEntity(string $entityClass, IReader $metaData, array $dbData): object
     {
-        $reflectionClass = new ReflectionClass($metaData->getEntityName());
+        $reflectionClass = new ReflectionClass($entityClass);
         $ormEntity = $reflectionClass->newInstanceWithoutConstructor();
 
-        foreach ($metaData->getProperties() as $propertyName => $column) {
+        foreach ($metaData->getColumns($entityClass) as $propertyName => $column) {
             $propertyReflector = $reflectionClass->getProperty($propertyName);
 
             /** Если свойство не nullable типа, а в БД нет для него данных */
@@ -27,48 +26,40 @@ class Hydrator
                 && !$propertyReflector->getType()->allowsNull()
                 && empty($dbData[$column->getName()])
             ) {
-                throw new RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $metaData->getEntityName()));
+                throw new RuntimeException(sprintf('Trying write null to not nullable property "%s", entity "%s"', $propertyName, $entityClass));
             }
 
             $propertyReflector->setAccessible(true);
             $propertyReflector->setValue($ormEntity, $dbData[$column->getName()] ?? null);
         }
 
-        if ($associations = $metaData->getRelations()) {
+        if ($associations = $metaData->getRelations($entityClass)) {
             foreach ($associations as $propertyName => $relation) {
                 $propertyReflector = $reflectionClass->getProperty($propertyName);
                 $propertyReflector->setAccessible(true);
 
                 if ($relation instanceof OneToOne) {
-                    $propName = $metaData->getPropertyNameByColumn($relation->getSourceColumn());
-                    $refProp = $reflectionClass->getProperty($propName);
-                    $refProp->setAccessible(true);
-                    $conditionValue = $refProp->getValue($ormEntity);
+                    if (!$propName = $metaData->getPropertyNameByColumn($entityClass, $relation->getSourceColumn())) {
+                        throw new RuntimeException(sprintf('Не могу получить название свойства по колонке'));
+                    }
 
-                    // fixme: хардкод рефлектор ридера
-                    // fixme: жёсткий говнокод
+                    /** Если у владельца связи нет связанной сущности */
+                    if (!$foreignKeyValue = $metaData->getReflectionProperty($entityClass, $propName)->getValue($ormEntity)) {
+                        continue;
+                    }
+
                     $targetEntityClassName = $metaData->getEntityClassNameByTable($relation->getTargetTable());
-                    $entityManager = \Lib\Container\Container::getService(EntityManager::class);
-                    $reader = Container::getService(IReader::class);
-                    $reader->readEntity($targetEntityClassName);
-
-
-                    $proxy = (new Proxy($targetEntityClassName, $entityManager));
-                    $proxy->onBeforeCallAnyMethod(function ($whereCondition) {
-                        return $this->entityManager->findOrFailBy($this->originClassName, $whereCondition);
-                    }, [$reader->getPrimaryProperty() => $conditionValue]);
-
-                    $propertyReflector->setValue($ormEntity, $proxy);
+                    $propertyReflector->setValue($ormEntity, (new DataBaseProxy($targetEntityClassName, $foreignKeyValue)));
                     continue;
                 }
 
                 // Для выборке только по нашей сущности WHERE ...
-                $propPrimaryKey = $reflectionClass->getProperty($metaData->getPrimaryProperty());
+                $propPrimaryKey = $reflectionClass->getProperty($metaData->getPkColumnByEntity($entityClass));
                 $propPrimaryKey->setAccessible(true);
-                $columnExpression = $metaData->getColumnNameByProperty($metaData->getPrimaryProperty())->getName();
+                $columnExpression = $metaData->getPkColumnByEntity($entityClass);
 
-                $whereCondition = [$metaData->getTableName() . '.' . $columnExpression => $propPrimaryKey->getValue($ormEntity)];
-                $propertyReflector->setValue($ormEntity, new LazyCollection($relation, $whereCondition));
+                $whereCondition = [$metaData->getTableNameByEntity($entityClass) . '.' . $columnExpression => $propPrimaryKey->getValue($ormEntity)];
+                $propertyReflector->setValue($ormEntity, new LazyCollection($relation, $metaData, $whereCondition));
             }
         }
 

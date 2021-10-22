@@ -2,6 +2,10 @@
 
 namespace Lib\Database\EntityManager;
 
+use Entity\AccessToken;
+use Entity\Message;
+use Entity\Picture;
+use Entity\User;
 use InvalidArgumentException;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
@@ -19,7 +23,12 @@ class EntityManager
         protected IReader $entityReader,
         protected QueryBuilder $queryBuilder
     ) {
-
+        $this->entityReader->loadOrmClasses(...[
+            User::class,
+            AccessToken::class,
+            Message::class,
+            Picture::class
+        ]);
     }
 
     public function findOrFailBy(string $entityClassName, array $whereCondition) : object
@@ -43,19 +52,21 @@ class EntityManager
             throw new InvalidArgumentException(sprintf('Cannot find "%s" class', $entityClassName));
         }
 
-        $this->entityReader->readEntity($entityClassName);
-
-        /** Выражение с уже подставленными колонками вместо названий свойств **/
+        /** Конвертация ключей свойств в ключи колонки **/
         $preparedCondition = [];
 
         foreach ($whereCondition as $propName => $propValue) {
-            $preparedCondition[$this->entityReader->getColumnNameByProperty($propName)->getName()] = $propValue;
+            if (!($column = $this->entityReader->getColumnNameByProperty($entityClassName, $propName))) {
+                throw new InvalidArgumentException(sprintf('Cannot find column for prop %s', $propName));
+            }
+
+            $preparedCondition[$column->getName()] = $propValue;
         }
 
         $dbData =
             $this->queryBuilder
                 ->select(['*'])
-                ->from($this->entityReader->getTableName())
+                ->from($this->entityReader->getTableNameByEntity($entityClassName))
                 ->where($preparedCondition)
                 ->limit($limit)
                 ->exec();
@@ -64,19 +75,32 @@ class EntityManager
             return null;
         }
 
-        $entity = Hydrator::getEntity($this->entityReader, $dbData);
+        $entity = Hydrator::getEntity($entityClassName, $this->entityReader, $dbData);
 
-        /** todo: какой то уродский способ проверки заполненности объекта */
-        if (array_filter((array) $entity)) {
+        if ($this->isFilled($entity)) {
             self::$unitOfWork[spl_object_hash($entity)] = $entity;
         }
 
         return $entity;
     }
 
-    public function findByPrimaryKey(string $entityClassName, int|string $id) : ?object
+    public function findByPrimaryKey(string $entityClassName, int|string $id) : object
     {
-        return $this->findBy($entityClassName, [$this->entityReader->getPrimaryKey() => $id]);
+        if (!$entity = $this->findBy($entityClassName, [$this->entityReader->getPkPropertyByEntity($entityClassName) => $id])) {
+            throw new RuntimeException(sprintf('Cannot find "%s" with primary key %d', $entityClassName, $id));
+        }
+
+        return $entity;
+    }
+
+    /**
+     * Проверяет заполненно ли хоть одно свойство объекта
+     * @param object $checkObj
+     * @return bool
+     */
+    protected function isFilled(object $checkObj) : bool
+    {
+        return (bool) array_filter((array) $checkObj);
     }
 
     /**

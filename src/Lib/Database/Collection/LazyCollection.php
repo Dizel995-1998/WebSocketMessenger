@@ -6,9 +6,7 @@ use IteratorAggregate;
 use Lib\Container\Container;
 use Lib\Database\Hydrator\Hydrator;
 use Lib\Database\Query\QueryBuilder;
-use Lib\Database\Reader\ArrayReader;
 use Lib\Database\Reader\IReader;
-use Lib\Database\Reader\ReflectionReader;
 use Lib\Database\Relations\BaseRelation;
 
 class LazyCollection implements IteratorAggregate
@@ -23,7 +21,8 @@ class LazyCollection implements IteratorAggregate
      */
     public function __construct(
         protected BaseRelation $relation,
-        protected array $where = []
+        protected IReader $reader,
+        protected array $where = [],
     ) {
 
     }
@@ -40,12 +39,8 @@ class LazyCollection implements IteratorAggregate
                 ->exec(true);
 
             foreach ($dataCollection as $item) {
-                // fixme: какое то говно, придумать красивый механизм получения названия сущности по таблице
-                $reader = Container::getService(IReader::class);
-                $entityRelationName = $reader->getEntityClassNameByTable($this->relation->getTargetTable());
-                $reader->readEntity($entityRelationName);
-
-                $this->elements[] = Hydrator::getEntity($reader, $item);
+                $targetClassName = $this->reader->getEntityClassNameByTable($this->relation->getTargetTable());
+                $this->elements[] = Hydrator::getEntity($targetClassName, $this->reader, $item);
             }
 
             $this->initialized = true;
